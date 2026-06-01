@@ -762,8 +762,12 @@
           desiredHeaders.forEach((header) => {
             const td = document.createElement("td");
             
-            // Cek data (termasuk jaga-jaga kalau ada perbedaan huruf besar/kecil atau beda penulisan 's')
-            let cellValue = row[header] || row[header.toUpperCase()] || row["Detail Progress"] || "-";
+            // Cek berbagai kemungkinan penulisan nama kolom di excel
+            let cellValue = row[header] || 
+                            row[header.toUpperCase()] || 
+                            row[header.replace(" ", "")] || // Membaca "SITE ID" sebagai "SITEID"
+                            row["Detail Progress"] || 
+                            "-";
             
             td.textContent = cellValue;
             tr.appendChild(td);
