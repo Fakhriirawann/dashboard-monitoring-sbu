@@ -281,6 +281,17 @@
       tr:hover {
         background-color: var(--tr-hover);
       }
+      /* --- CSS Tambahan untuk Dropdown Filter --- */
+        select#filterDistrict {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+        }
+
+        select#filterDistrict option {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            padding: 10px;
+        }
     </style>
   </head>
   <body>
@@ -304,6 +315,10 @@
         <div class="page-title" id="bannerTitle">FILTER : SEMUA DATA</div>
 
         <div class="header-actions" style="align-items: center;">
+          <!-- Tambahkan Dropdown District ini -->
+<select id="filterDistrict" class="btn-action" style="outline: none; max-width: 200px;">
+    <option value="All">Semua Distrik</option>
+</select>
             <button class="btn-action btn-primary" onclick="window.open('https://docs.google.com/spreadsheets/d/1KcNQemdjeEdwbUgD1wLKs9X3RDnYzB-h10bSX5ryurk/edit?gid=704502274', '_blank')">
                 <i class="fa-solid fa-table"></i> BUKA DATA
             </button>
@@ -368,7 +383,15 @@
           <div class="chart-container"><canvas id="mainBarChart"></canvas></div>
         </div>
       </div>
-
+        <!-- Tambahkan Chart Baru Ini -->
+<div class="chart-grid" style="grid-template-columns: 1fr; margin-top: 20px;">
+    <div class="card">
+        <div class="card-title">PROGRES LAPANGAN</div>
+        <div class="chart-container" style="min-height: 350px;">
+            <canvas id="progresChart"></canvas>
+        </div>
+    </div>
+</div>
       <div class="card" style="padding: 0; border: none">
         <div
           id="loadingIndicator"
@@ -398,6 +421,7 @@
       let globalData = [];
       let chartDonut = null;
       let chartBar = null;
+      let chartProgres = null;
       let currentActiveMenu = "Semua Data";
 
       // ==========================================
@@ -436,14 +460,65 @@
           document.getElementById("loadingIndicator").style.display = "none";
           document.getElementById("dataTable").style.display = "table";
 
+          // --- Inisialisasi Dropdown Distrik ---
+          // --- Inisialisasi Dropdown Distrik (Tanpa Duplikat Huruf Kecil/Besar) ---
+          // Seragamkan semua teks menjadi huruf kapital (toUpperCase) sebelum dimasukkan ke Set
+          const rawDistricts = globalData.map(item => (item['DISTRICT'] || '').trim().toUpperCase()).filter(Boolean);
+          const distrikUnik = [...new Set(rawDistricts)].sort();
+          
+          const districtSelect = document.getElementById('filterDistrict');
+          
+          if (districtSelect) {
+            // Kosongkan opsi lama kecuali "Semua Distrik"
+            districtSelect.innerHTML = '<option value="ALL">Semua Distrik</option>';
+
+            distrikUnik.forEach(dist => {
+                const opt = document.createElement('option');
+                opt.value = dist;
+                opt.textContent = dist; // Teks akan tampil KAPITAL semua agar rapi
+                districtSelect.appendChild(opt);
+            });
+
+            // Event listener untuk dropdown
+            districtSelect.addEventListener('change', function() {
+                applyFilters();
+            });
+          }
+          // -------------------------------------
+          // -------------------------------------
+
           generateSidebar(globalData);
-          updateDashboard(globalData, "Semua Data");
+          applyFilters(); // Panggil fungsi filter gabungan di awal
         },
         error: function (err) {
           document.getElementById("loadingIndicator").innerHTML =
             `<i class="fa-solid fa-triangle-exclamation" style="color:red;"></i> Gagal memuat data.`;
         },
       });
+      function applyFilters() {
+          let filteredData = globalData;
+          
+          // 1. Filter Region (Dari Sidebar)
+          if (currentActiveMenu !== "Semua Data") {
+              filteredData = filteredData.filter(item => (item['REGION'] || '').toUpperCase() === currentActiveMenu.toUpperCase());
+          }
+          
+          // 2. Filter District (Dari Dropdown)
+          const districtSelect = document.getElementById('filterDistrict');
+          if (districtSelect) {
+              const selectedDistrict = districtSelect.value.toUpperCase(); // Ambil value kapital
+              if (selectedDistrict !== "ALL") {
+                  // Bandingkan dengan data dari excel yang juga diseragamkan ke kapital
+                  filteredData = filteredData.filter(item => {
+                      const itemDist = (item['DISTRICT'] || '').trim().toUpperCase();
+                      return itemDist === selectedDistrict;
+                  });
+              }
+          }
+          
+          // Render ulang dashboard
+          updateDashboard(filteredData, currentActiveMenu);
+      }
 
       // ==========================================
       // 2. GENERATE SIDEBAR & MENU
@@ -466,7 +541,8 @@
           .addEventListener("click", function () {
             setActiveMenu(this);
             currentActiveMenu = "Semua Data";
-            updateDashboard(globalData, currentActiveMenu);
+            // Panggil filter gabungan, bukan updateDashboard langsung
+            applyFilters();
           });
 
         kategoriUnik.forEach((kategori) => {
@@ -477,10 +553,8 @@
           li.addEventListener("click", function () {
             setActiveMenu(this);
             currentActiveMenu = kategori;
-            const filteredData = globalData.filter(
-              (item) => item[kolomKategori] === kategori,
-            );
-            updateDashboard(filteredData, currentActiveMenu);
+            // Panggil filter gabungan, bukan updateDashboard langsung
+            applyFilters();
           });
 
           menuList.appendChild(li);
@@ -581,11 +655,13 @@
       function renderCharts(data, onAir, open, drop, kendala) {
         if (chartDonut) chartDonut.destroy();
         if (chartBar) chartBar.destroy();
+        if (chartProgres) chartProgres.destroy(); // Hancurkan chart progres lama
 
         // Warna statis untuk Dark Mode
         const textColor = "#8b949e";
         const gridColor = "#2A3441";
 
+        // 1. Chart Donut
         const ctxDonut = document.getElementById("donutChart").getContext("2d");
         chartDonut = new Chart(ctxDonut, {
           type: "doughnut",
@@ -612,9 +688,10 @@
           },
         });
 
+        // 2. Chart Bar (Distribusi District)
         const districtData = {};
         data.forEach((item) => {
-          const district = (item["DISTRICT"] || "Uncategorized").trim();
+          const district = (item["DISTRICT"] || "Uncategorized").trim().toUpperCase();
           const statusLap = (item["Status Lapangan"] || "").toUpperCase();
           const progLap = (item["PROGRES LAPANGAN"] || "").toUpperCase();
 
@@ -696,6 +773,42 @@
             },
           },
         });
+
+        // 3. Chart Progres Lapangan (Baru)
+        const progresData = {};
+        data.forEach((item) => {
+            const prog = (item['PROGRES LAPANGAN'] || 'KOSONG / TIDAK ADA DATA').trim();
+            if (prog !== '') {
+                progresData[prog] = (progresData[prog] || 0) + 1;
+            }
+        });
+
+        const ctxProgres = document.getElementById('progresChart');
+        // Pastikan elemen canvasnya ada sebelum membuat chart
+        if (ctxProgres) {
+            chartProgres = new Chart(ctxProgres.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(progresData),
+                    datasets: [{
+                        label: 'Jumlah Site',
+                        data: Object.values(progresData),
+                        backgroundColor: '#8B5CF6', // Warna Ungu
+                        borderRadius: 4
+                    }]
+                },
+                options: { 
+                    indexAxis: 'y', 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                        y: { grid: { display: false }, ticks: { color: textColor } }
+                    }
+                }
+            });
+        }
       }
     </script>
   </body>
