@@ -271,13 +271,15 @@
         white-space: nowrap;
       }
       th {
-        background-color: var(--th-bg);
-        color: var(--text-muted);
-        font-weight: 600;
-        position: sticky;
-        top: 0;
-        z-index: 1;
-      }
+            /* Ubah background-color menjadi warna solid yang pekat */
+            background-color: #0d1425; 
+            color: var(--text-muted);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10; /* Naikkan z-index agar selalu berada di paling atas */
+            border-bottom: 2px solid var(--border-color); /* Pertegas garis pemisahnya */
+        }
       tr:hover {
         background-color: var(--tr-hover);
       }
