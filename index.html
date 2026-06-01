@@ -558,13 +558,15 @@
           if (districtSelect && districtSelect.value.toUpperCase() !== "ALL") {
               filteredData = filteredData.filter(item => (item['DISTRICT'] || '').trim().toUpperCase() === districtSelect.value.toUpperCase());
           }
-
           // 3. Search SITE ID (Pencarian Teks)
           const searchSite = document.getElementById('searchSiteId');
           if (searchSite && searchSite.value.trim() !== "") {
               const query = searchSite.value.trim().toUpperCase();
-              // Menggunakan .includes agar bisa mencari sebagian teks saja
-              filteredData = filteredData.filter(item => (item['SITE ID'] || '').toUpperCase().includes(query));
+              filteredData = filteredData.filter(item => {
+                  // Mengambil data dari kolom 'SITE ID' ATAU 'SITEID' (tanpa spasi)
+                  const siteIdValue = (item['SITE ID'] || item['SITEID'] || '').toString().toUpperCase();
+                  return siteIdValue.includes(query);
+              });
           }
 
           // 4. Filter Status Lapangan
