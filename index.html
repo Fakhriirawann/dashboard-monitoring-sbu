@@ -292,6 +292,37 @@
             color: var(--text-main);
             padding: 10px;
         }
+        /* --- CSS Tambahan untuk Filter Tabel --- */
+        .table-filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 0 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            color: var(--text-main);
+            outline: none;
+            font-size: 0.8rem;
+        }
+
+        .search-input:focus {
+            border-color: var(--color-open);
+        }
+        
+        /* Memastikan semua opsi dropdown warnanya gelap */
+        select.btn-action option {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+        }
     </style>
   </head>
   <body>
@@ -400,6 +431,21 @@
           <i class="fa-solid fa-spinner fa-spin"></i> Sinkronisasi Data
           Spreadsheet...
         </div>
+        <div class="table-filters">
+                <input type="text" id="searchSiteId" class="search-input" placeholder="Search by SITE ID...">
+                
+                <select id="filterStatusLap" class="btn-action" style="outline: none; flex: 1; min-width: 150px;">
+                    <option value="ALL">Semua Status Lapangan</option>
+                </select>
+                
+                <select id="filterProgresLap" class="btn-action" style="outline: none; flex: 1; min-width: 150px;">
+                    <option value="ALL">Semua Progres Lapangan</option>
+                </select>
+                
+                <select id="filterSubProgresLap" class="btn-action" style="outline: none; flex: 1; min-width: 150px;">
+                    <option value="ALL">Semua Sub Progres Lapangan</option>
+                </select>
+            </div>
         <div class="table-container">
           <table id="dataTable" style="display: none">
             <thead id="tableHead"></thead>
@@ -488,6 +534,7 @@
           // -------------------------------------
 
           generateSidebar(globalData);
+          populateTableDropdowns(globalData);
           applyFilters(); // Panggil fungsi filter gabungan di awal
         },
         error: function (err) {
@@ -495,6 +542,9 @@
             `<i class="fa-solid fa-triangle-exclamation" style="color:red;"></i> Gagal memuat data.`;
         },
       });
+      // ==========================================
+      // FUNGSI GABUNGAN FILTER (REGION, DISTRICT, TABEL)
+      // ==========================================
       function applyFilters() {
           let filteredData = globalData;
           
@@ -503,21 +553,76 @@
               filteredData = filteredData.filter(item => (item['REGION'] || '').toUpperCase() === currentActiveMenu.toUpperCase());
           }
           
-          // 2. Filter District (Dari Dropdown)
+          // 2. Filter District (Dari Dropdown Kanan Atas)
           const districtSelect = document.getElementById('filterDistrict');
-          if (districtSelect) {
-              const selectedDistrict = districtSelect.value.toUpperCase(); // Ambil value kapital
-              if (selectedDistrict !== "ALL") {
-                  // Bandingkan dengan data dari excel yang juga diseragamkan ke kapital
-                  filteredData = filteredData.filter(item => {
-                      const itemDist = (item['DISTRICT'] || '').trim().toUpperCase();
-                      return itemDist === selectedDistrict;
-                  });
-              }
+          if (districtSelect && districtSelect.value.toUpperCase() !== "ALL") {
+              filteredData = filteredData.filter(item => (item['DISTRICT'] || '').trim().toUpperCase() === districtSelect.value.toUpperCase());
+          }
+
+          // 3. Search SITE ID (Pencarian Teks)
+          const searchSite = document.getElementById('searchSiteId');
+          if (searchSite && searchSite.value.trim() !== "") {
+              const query = searchSite.value.trim().toUpperCase();
+              // Menggunakan .includes agar bisa mencari sebagian teks saja
+              filteredData = filteredData.filter(item => (item['SITE ID'] || '').toUpperCase().includes(query));
+          }
+
+          // 4. Filter Status Lapangan
+          const statusSelect = document.getElementById('filterStatusLap');
+          if (statusSelect && statusSelect.value.toUpperCase() !== "ALL") {
+              filteredData = filteredData.filter(item => (item['Status Lapangan'] || '').trim().toUpperCase() === statusSelect.value.toUpperCase());
+          }
+
+          // 5. Filter Progres Lapangan
+          const progresSelect = document.getElementById('filterProgresLap');
+          if (progresSelect && progresSelect.value.toUpperCase() !== "ALL") {
+              filteredData = filteredData.filter(item => (item['PROGRES LAPANGAN'] || '').trim().toUpperCase() === progresSelect.value.toUpperCase());
+          }
+
+          // 6. Filter Sub Progres Lapangan
+          const subProgresSelect = document.getElementById('filterSubProgresLap');
+          if (subProgresSelect && subProgresSelect.value.toUpperCase() !== "ALL") {
+              filteredData = filteredData.filter(item => {
+                  const subProg = (item['SUB PROGRES LAPANGAN'] || item['Sub Progres Lapangan'] || '').trim().toUpperCase();
+                  return subProg === subProgresSelect.value.toUpperCase();
+              });
           }
           
-          // Render ulang dashboard
+          // Render ulang dashboard dengan data yang sudah disaring berlapis
           updateDashboard(filteredData, currentActiveMenu);
+      }
+
+      // ==========================================
+      // FUNGSI UNTUK MENGISI DROPDOWN TABEL OTOMATIS
+      // ==========================================
+      function populateTableDropdowns(data) {
+          function fillDropdown(columnKey, elementId, defaultText) {
+              const rawValues = data.map(item => (item[columnKey] || item[columnKey.toUpperCase()] || item[columnKey.toLowerCase()] || '').trim().toUpperCase()).filter(Boolean);
+              const uniqueValues = [...new Set(rawValues)].sort();
+              const selectEl = document.getElementById(elementId);
+              
+              if (selectEl) {
+                  selectEl.innerHTML = `<option value="ALL">${defaultText}</option>`;
+                  uniqueValues.forEach(val => {
+                      const opt = document.createElement('option');
+                      opt.value = val;
+                      opt.textContent = val;
+                      selectEl.appendChild(opt);
+                  });
+                  // Tambahkan event listener agar saat dipilih langsung memfilter
+                  selectEl.addEventListener('change', applyFilters);
+              }
+          }
+
+          fillDropdown('Status Lapangan', 'filterStatusLap', 'Semua Status Lapangan');
+          fillDropdown('PROGRES LAPANGAN', 'filterProgresLap', 'Semua Progres Lapangan');
+          fillDropdown('SUB PROGRES LAPANGAN', 'filterSubProgresLap', 'Semua Sub Progres Lapangan');
+          
+          // Event Listener untuk kotak pencarian SITE ID (berjalan setiap kali mengetik)
+          const searchInput = document.getElementById('searchSiteId');
+          if (searchInput) {
+              searchInput.addEventListener('input', applyFilters);
+          }
       }
 
       // ==========================================
@@ -629,20 +734,38 @@
 
         if (data.length === 0) return;
 
-        const headers = Object.keys(data[0]);
+        // 1. Tentukan kolom spesifik yang hanya ingin ditampilkan
+        const desiredHeaders = [
+          "NO",
+          "SITE ID",
+          "STO",
+          "SITE NAME",
+          "MITRA",
+          "Status Lapangan",
+          "PROGRES LAPANGAN",
+          "SUB PROGRES LAPANGAN",
+          "DETAIL PROGRES" // Disesuaikan dengan ejaan dari data spreadsheetmu
+        ];
+
+        // 2. Render Header (Judul Kolom)
         const trHead = document.createElement("tr");
-        headers.forEach((header) => {
+        desiredHeaders.forEach((header) => {
           const th = document.createElement("th");
           th.textContent = header;
           trHead.appendChild(th);
         });
         tableHead.appendChild(trHead);
 
+        // 3. Render Isi Tabel
         data.forEach((row) => {
           const tr = document.createElement("tr");
-          headers.forEach((header) => {
+          desiredHeaders.forEach((header) => {
             const td = document.createElement("td");
-            td.textContent = row[header] || "-";
+            
+            // Cek data (termasuk jaga-jaga kalau ada perbedaan huruf besar/kecil atau beda penulisan 's')
+            let cellValue = row[header] || row[header.toUpperCase()] || row["Detail Progress"] || "-";
+            
+            td.textContent = cellValue;
             tr.appendChild(td);
           });
           tableBody.appendChild(tr);
