@@ -43,7 +43,122 @@
         box-sizing: border-box;
         font-family: "Inter", sans-serif;
       }
+      /* =========================================
+   RESPONSIVE & SIDEBAR TOGGLE
+   ========================================= */
 
+      /* Sembunyikan tombol toggle saat di layar Laptop/PC */
+      .btn-toggle {
+        display: none;
+        background: none;
+        border: none;
+        color: #8b949e; /* Sesuaikan dengan warna teks tema gelapmu */
+        font-size: 1.5rem;
+        cursor: pointer;
+        margin-right: 15px;
+        transition: color 0.3s ease;
+      }
+
+      .btn-toggle:hover {
+        color: #ffffff;
+      }
+
+      /* --- Pengaturan Layar HP / Tablet Kecil (maksimal lebar 768px) --- */
+      @media screen and (max-width: 768px) {
+        /* 1. Tampilkan Tombol Toggle */
+        .btn-toggle {
+          display: inline-block;
+        }
+
+        /* 2. Sembunyikan Sidebar ke luar layar sebelah kiri */
+        .sidebar {
+          /* Ganti '.sidebar' dengan class atau id sidebar-mu yang asli jika berbeda */
+          position: fixed;
+          top: 0;
+          left: -260px; /* Asumsi lebar sidebar 260px, geser ke kiri sebesar lebarnya */
+          height: 100vh;
+          z-index: 1000;
+          transition: left 0.3s ease-in-out;
+          box-shadow: 5px 0 15px rgba(0, 0, 0, 0);
+        }
+
+        /* Class tambahan untuk memunculkan sidebar (nanti dipicu oleh JavaScript) */
+        .sidebar.active {
+          left: 0; /* Geser kembali ke dalam layar */
+          box-shadow: 5px 0 15px rgba(0, 0, 0, 0.5); /* Beri efek bayangan agar terlihat elegan */
+        }
+
+        /* 3. Lebarkan Konten Utama */
+        .main-content {
+          /* Ganti '.main-content' dengan class kontainer utamamu */
+          width: 100%;
+          margin-left: 0 !important;
+          padding: 15px;
+        }
+
+        /* 4. Tumpuk Kartu KPI menjadi 2 kolom atau 1 kolom */
+        /* Asumsi kamu pakai Grid atau Flexbox untuk KPI */
+        .kpi-container {
+          /* Sesuaikan nama class ini */
+          display: grid;
+          grid-template-columns: repeat(
+            2,
+            1fr
+          ) !important; /* Jadi 2 kotak atas-bawah */
+          gap: 10px;
+        }
+
+        /* 5. Tumpuk Diagram/Chart menjadi 1 kolom */
+        .charts-container {
+          /* Sesuaikan nama class ini */
+          display: flex;
+          flex-direction: column !important;
+          gap: 15px;
+        }
+
+        .chart-card {
+          /* Sesuaikan nama class untuk kotak diagrammu */
+          width: 100% !important;
+        }
+
+        /* 6. Pastikan tabel bisa digeser ke samping */
+        .table-wrapper {
+          /* Sesuaikan nama class bungkus tabelmu */
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch; /* Biar scroll-nya mulus di iPhone/Android */
+        }
+      }
+
+      /* Pengaturan layar HP super kecil (maks 480px) */
+      @media screen and (max-width: 480px) {
+        .kpi-container {
+          grid-template-columns: 1fr !important; /* KPI jadi 1 baris berjejer ke bawah */
+        }
+      }
+      /* Sembunyikan tombol X saat di layar Laptop/PC */
+      .btn-close-sidebar {
+        display: none;
+      }
+
+      @media screen and (max-width: 768px) {
+        /* Munculkan dan posisikan tombol X di pojok kanan atas sidebar */
+        .btn-close-sidebar {
+          display: block;
+          position: absolute;
+          top: 20px;
+          right: 20px;
+          background: none;
+          border: none;
+          color: #8b949e; /* Warna abu-abu yang pas dengan tema gelapmu */
+          font-size: 1.5rem;
+          cursor: pointer;
+          z-index: 1001; /* Pastikan selalu berada di atas teks/logo */
+        }
+
+        .btn-close-sidebar:hover {
+          color: #ef4444; /* Berubah jadi merah saat disentuh/hover */
+        }
+      }
       body {
         background-color: var(--bg-body);
         color: var(--text-main);
@@ -344,6 +459,10 @@
           style="width: 180px; height: auto; object-fit: contain"
         />
       </div>
+      <!-- Letakkan di dalam div sidebar kamu -->
+      <button id="closeSidebar" class="btn-close-sidebar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
       <ul class="menu-list" id="sidebarMenu">
         <li class="menu-item">
           <i class="fa-solid fa-spinner fa-spin"></i> Memuat Menu...
@@ -353,6 +472,10 @@
 
     <main class="main-wrapper">
       <div class="header-top">
+        <button id="sidebarToggle" class="btn-toggle">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+
         <div class="page-title" id="bannerTitle">FILTER : SEMUA DATA</div>
 
         <div class="header-actions" style="align-items: center">
@@ -441,7 +564,9 @@
           <div class="chart-container"><canvas id="donutChart"></canvas></div>
         </div>
         <div class="card">
-          <div class="card-title" id="titleChart2"><i class="fa-solid fa-chart-column"></i>DISTRIBUSI DISTRICT</div>
+          <div class="card-title" id="titleChart2">
+            <i class="fa-solid fa-chart-column"></i>DISTRIBUSI DISTRICT
+          </div>
           <div class="chart-container"><canvas id="mainBarChart"></canvas></div>
         </div>
       </div>
@@ -461,7 +586,9 @@
 
         <!-- Kanan: Kategori SLA (ON) (Porsi sedang) -->
         <div class="card">
-          <div class="card-title" id="titleChart4"> <i class="fa-solid fa-clock"></i>KATEGORI SLA (STATUS ON)</div>
+          <div class="card-title" id="titleChart4">
+            <i class="fa-solid fa-clock"></i>KATEGORI SLA (STATUS ON)
+          </div>
           <div class="chart-container" style="min-height: 350px">
             <canvas id="slaChart"></canvas>
           </div>
@@ -571,21 +698,36 @@
             let headerRowIndex = 0;
             for (let i = 0; i < Math.min(15, rawArray.length); i++) {
               if (!rawArray[i]) continue;
-              
+
               let matchCount = 0;
-              
+
               // Periksa setiap sel di baris ini
-              rawArray[i].forEach(cell => {
-                const text = (cell || "").toString().replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
-                
+              rawArray[i].forEach((cell) => {
+                const text = (cell || "")
+                  .toString()
+                  .replace(/[\n\r]+/g, " ")
+                  .replace(/\s+/g, " ")
+                  .trim()
+                  .toUpperCase();
+
                 // Jika sel mengandung nama kolom penting, tambah poin kecocokan
-                if (text === "SITE ID" || text === "ID-IHLD" || 
-                    text === "NO ORDER" || text === "NO." || text === "NO" || 
-                    text === "REGIONAL" || text === "REGION" || 
-                    text === "DISTRICT" || text === "STO" || 
-                    text === "BRANCH FMC" || text === "NAMA LOP" || 
-                    text === "SUB STATUS KONS" || text === "STATUS" || text === "MITRA") {
-                   matchCount++;
+                if (
+                  text === "SITE ID" ||
+                  text === "ID-IHLD" ||
+                  text === "NO ORDER" ||
+                  text === "NO." ||
+                  text === "NO" ||
+                  text === "REGIONAL" ||
+                  text === "REGION" ||
+                  text === "DISTRICT" ||
+                  text === "STO" ||
+                  text === "BRANCH FMC" ||
+                  text === "NAMA LOP" ||
+                  text === "SUB STATUS KONS" ||
+                  text === "STATUS" ||
+                  text === "MITRA"
+                ) {
+                  matchCount++;
                 }
               });
 
@@ -607,11 +749,15 @@
               headers.forEach((head, index) => {
                 if (head) {
                   // Bersihkan teks dari spasi dan enter
-                  let headerName = head.toString().replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim();
-                  
+                  let headerName = head
+                    .toString()
+                    .replace(/[\n\r]+/g, " ")
+                    .replace(/\s+/g, " ")
+                    .trim();
+
                   // Buat versi HURUF BESAR SEMUA sebagai cadangan anti-gagal
-                  let safeHeader = headerName.toUpperCase(); 
-                  
+                  let safeHeader = headerName.toUpperCase();
+
                   if (!obj.hasOwnProperty(headerName)) {
                     obj[headerName] = row[index]; // Simpan nama asli
                     obj[safeHeader] = row[index]; // Simpan kloningan huruf besar (misal: "SUB STATUS KONS")
@@ -692,7 +838,7 @@
           });
         }
 
-       // 5. Search Teks Berdasarkan Kolom Spesifik (Ultra-Aman)
+        // 5. Search Teks Berdasarkan Kolom Spesifik (Ultra-Aman)
         const searchInput = document.getElementById("searchSiteId");
         const searchColumn = document.getElementById("searchColumn");
 
@@ -705,19 +851,31 @@
 
             for (let key in item) {
               // Bersihkan nama kolom Excel dari spasi dan enter
-              let cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+              let cleanKey = key
+                .replace(/[\n\r]+/g, " ")
+                .replace(/\s+/g, " ")
+                .trim()
+                .toUpperCase();
               let isTargetColumn = false;
 
               // Aturan khusus pengenalan kolom
               if (selectedCol === "SITE ID") {
-                isTargetColumn = (cleanKey === "SITE ID" || cleanKey === "SITEID");
+                isTargetColumn =
+                  cleanKey === "SITE ID" || cleanKey === "SITEID";
               } else if (selectedCol === "NO ORDER") {
-                isTargetColumn = (cleanKey === "NO ORDER" || cleanKey === "NO. ORDER" || cleanKey === "NOMOR ORDER" || cleanKey.includes("NO ORDER"));
+                isTargetColumn =
+                  cleanKey === "NO ORDER" ||
+                  cleanKey === "NO. ORDER" ||
+                  cleanKey === "NOMOR ORDER" ||
+                  cleanKey.includes("NO ORDER");
               } else if (selectedCol === "IHLD" || selectedCol === "ID-IHLD") {
                 // Menyatukan pencarian IHLD dan ID-IHLD agar aman
-                isTargetColumn = (cleanKey === "IHLD" || cleanKey === "ID-IHLD" || cleanKey.includes("IHLD"));
+                isTargetColumn =
+                  cleanKey === "IHLD" ||
+                  cleanKey === "ID-IHLD" ||
+                  cleanKey.includes("IHLD");
               } else {
-                isTargetColumn = (cleanKey === selectedCol);
+                isTargetColumn = cleanKey === selectedCol;
               }
 
               // Jika nama kolom cocok, cek isi datanya
@@ -773,9 +931,21 @@
           }
         }
 
-        fillDropdown("Status Lapangan", "filterStatusLap", "Semua Status Lapangan");
-        fillDropdown("PROGRES LAPANGAN", "filterProgresLap", "Semua Progres Lapangan");
-        fillDropdown("SUB PROGRES LAPANGAN", "filterSubProgresLap", "Semua Sub Progres Lapangan");
+        fillDropdown(
+          "Status Lapangan",
+          "filterStatusLap",
+          "Semua Status Lapangan",
+        );
+        fillDropdown(
+          "PROGRES LAPANGAN",
+          "filterProgresLap",
+          "Semua Progres Lapangan",
+        );
+        fillDropdown(
+          "SUB PROGRES LAPANGAN",
+          "filterSubProgresLap",
+          "Semua Sub Progres Lapangan",
+        );
 
         // ---> KODE BARU: UPDATE DROPDOWN PENCARIAN DINAMIS <---
         const searchColumn = document.getElementById("searchColumn");
@@ -786,14 +956,20 @@
           // Tentukan pilihan kolom pencarian sesuai menu
           if (currentActiveMenu === "NODE-B") {
             searchOptions = ["SITE ID", "SITE NAME"];
-          } else if (currentActiveMenu === "HEM SBU" || currentActiveMenu === "OLO SBU") {
+          } else if (
+            currentActiveMenu === "HEM SBU" ||
+            currentActiveMenu === "OLO SBU"
+          ) {
             searchOptions = ["NO ORDER", "IHLD", "NAMA PROYEK"];
-          } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
+          } else if (
+            currentActiveMenu === "JPP PT3/PT4" ||
+            currentActiveMenu.includes("JPP")
+          ) {
             searchOptions = ["ID-IHLD", "NAMA LOP"];
           }
 
           // Masukkan pilihan tersebut ke dalam dropdown HTML
-          searchOptions.forEach(opt => {
+          searchOptions.forEach((opt) => {
             const optionEl = document.createElement("option");
             optionEl.value = opt;
             optionEl.textContent = opt;
@@ -833,17 +1009,21 @@
             loadData(gidHemSbu); // Tarik data HEM SBU
           });
 
-       document.getElementById("menu-olosbu").addEventListener("click", function () {
+        document
+          .getElementById("menu-olosbu")
+          .addEventListener("click", function () {
             setActiveMenu(this);
             currentActiveMenu = "OLO SBU";
-            loadData(gidOloSbu); 
-        });
+            loadData(gidOloSbu);
+          });
         // Klik Menu JPP PT3/PT4 (KODE BARU - GANTIKAN BLOK MENU KOSONG)
-        document.getElementById("menu-jpp").addEventListener("click", function () {
+        document
+          .getElementById("menu-jpp")
+          .addEventListener("click", function () {
             setActiveMenu(this);
             currentActiveMenu = "JPP PT3/PT4";
-            loadData(gidJpp); 
-        });
+            loadData(gidJpp);
+          });
       }
       function setActiveMenu(clickedElement) {
         document
@@ -852,13 +1032,17 @@
         clickedElement.classList.add("active");
       }
 
-     // ==========================================
+      // ==========================================
       // 3. UPDATE KESELURUHAN (KPI & TABEL)
       // ==========================================
       function updateDashboard(dataToRender) {
-        document.getElementById("bannerTitle").innerHTML = `<i class="fa-solid fa-satellite-dish"></i> ED SUMBAGUT`;
+        document.getElementById("bannerTitle").innerHTML =
+          `<i class="fa-solid fa-satellite-dish"></i> ED SUMBAGUT`;
 
-        let countOnAir = 0, countOpen = 0, countDrop = 0, countKendala = 0;
+        let countOnAir = 0,
+          countOpen = 0,
+          countDrop = 0,
+          countKendala = 0;
 
         dataToRender.forEach((item) => {
           let statusLap = "";
@@ -869,23 +1053,45 @@
             statusLap = (item["Status Lapangan"] || "").toUpperCase();
             progLap = (item["PROGRES LAPANGAN"] || "").toUpperCase();
           } else if (currentActiveMenu === "HEM SBU") {
-            statusLap = (item["STATUS JT"] || item["Sub Status"] || "").toUpperCase();
+            statusLap = (
+              item["STATUS JT"] ||
+              item["Sub Status"] ||
+              ""
+            ).toUpperCase();
             progLap = (item["Progress Lapangan"] || "").toUpperCase();
           } else if (currentActiveMenu === "OLO SBU") {
             statusLap = (item["Sub Status"] || "").toUpperCase();
             progLap = (item["Progress Lapangan"] || "").toUpperCase();
-          } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
+          } else if (
+            currentActiveMenu === "JPP PT3/PT4" ||
+            currentActiveMenu.includes("JPP")
+          ) {
             // Ditambah pengaman .includes("JPP") dan bacaan huruf besar
             statusLap = (item["Status"] || item["STATUS"] || "").toUpperCase();
-            progLap = (item["SUB STATUS KONS"] || item["Sub Status Kons"] || "").toUpperCase();
+            progLap = (
+              item["SUB STATUS KONS"] ||
+              item["Sub Status Kons"] ||
+              ""
+            ).toUpperCase();
           }
 
           // Menghitung jumlah masing-masing status
-          if (statusLap.includes("GOLIVE") || progLap.includes("ON AIR") || statusLap.includes("CLOSED") || progLap.includes("DONE") || statusLap === "ON") {
+          if (
+            statusLap.includes("GOLIVE") ||
+            progLap.includes("ON AIR") ||
+            statusLap.includes("CLOSED") ||
+            progLap.includes("DONE") ||
+            statusLap === "ON"
+          ) {
             countOnAir++;
           } else if (statusLap.includes("DROP") || progLap.includes("DROP")) {
             countDrop++;
-          } else if (statusLap.includes("KENDALA") || progLap.includes("REDESIGN") || statusLap.includes("HOLD") || progLap.includes("ISSUE")) {
+          } else if (
+            statusLap.includes("KENDALA") ||
+            progLap.includes("REDESIGN") ||
+            statusLap.includes("HOLD") ||
+            progLap.includes("ISSUE")
+          ) {
             countKendala++;
           } else {
             countOpen++;
@@ -899,7 +1105,13 @@
         document.getElementById("valKendala").textContent = countKendala;
 
         renderTable(dataToRender);
-        renderCharts(dataToRender, countOnAir, countOpen, countDrop, countKendala);
+        renderCharts(
+          dataToRender,
+          countOnAir,
+          countOpen,
+          countDrop,
+          countKendala,
+        );
       }
 
       function renderTable(data) {
@@ -914,31 +1126,56 @@
         // Penentuan Header sesuai Menu Aktif
         if (currentActiveMenu === "NODE-B") {
           desiredHeaders = [
-            "SITE ID", "STO", "SITE NAME", "MITRA", "Status Lapangan", 
-            "PROGRES LAPANGAN", "SUB PROGRES LAPANGAN", "KOMITMEN GO-LIVE", "DETAIL PROGRES"
+            "SITE ID",
+            "STO",
+            "SITE NAME",
+            "MITRA",
+            "Status Lapangan",
+            "PROGRES LAPANGAN",
+            "SUB PROGRES LAPANGAN",
+            "KOMITMEN GO-LIVE",
+            "DETAIL PROGRES",
           ];
         } else if (currentActiveMenu === "HEM SBU") {
           // Susunan baru HEM SBU: AP - E - F - C - R - T - U - X - W
           desiredHeaders = [
             "NO ORDER",
-            "IHLD",               // E
-            "NAMA PROYEK",        // F
-            "DISTRICT",           // C (Ganti jadi "STO" jika ternyata maksudmu STO)
-            "Mitra",              // R
-            "Progress Lapangan",  // T
-            "Sub Status",         // U
-            "Komitmen Golive",    // X
-            "Detail Progres"      // W
+            "IHLD", // E
+            "NAMA PROYEK", // F
+            "DISTRICT", // C (Ganti jadi "STO" jika ternyata maksudmu STO)
+            "Mitra", // R
+            "Progress Lapangan", // T
+            "Sub Status", // U
+            "Komitmen Golive", // X
+            "Detail Progres", // W
           ];
         } else if (currentActiveMenu === "OLO SBU") {
           desiredHeaders = [
-            "NO ORDER", "IHLD", "NAMA PROYEK", "DISTRICT", "STO", 
-            "Progress Lapangan", "Sub Status", "Mitra", "Komitmen Golive", "Detail Progres"
+            "NO ORDER",
+            "IHLD",
+            "NAMA PROYEK",
+            "DISTRICT",
+            "STO",
+            "Progress Lapangan",
+            "Sub Status",
+            "Mitra",
+            "Komitmen Golive",
+            "Detail Progres",
           ];
-        } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
+        } else if (
+          currentActiveMenu === "JPP PT3/PT4" ||
+          currentActiveMenu.includes("JPP")
+        ) {
           desiredHeaders = [
-            "ID-IHLD", "NAMA LOP", "BRANCH FMC", "STO", "Status", 
-            "SUB STATUS KONS", "Mitra", "KOMITMEN GOLIVE", "DETAIL STATUS"
+            "ID-IHLD",
+            "NAMA LOP",
+            "BRANCH FMC",
+            "STO",
+            "Status",
+            "SUB STATUS KONS",
+            "Mitra",
+            "KOMITMEN GOLIVE",
+            "DETAIL STATUS",
           ];
         }
 
@@ -948,17 +1185,49 @@
         function getCellValue(row, header) {
           let val = "-";
           const searchHeader = header.replace(/\s+/g, " ").trim().toUpperCase();
-          const matchingKey = Object.keys(row).find(key => {
-             const cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
-             if (searchHeader === "KOMITMEN GO-LIVE" || searchHeader === "KOMITMEN GOLIVE") return cleanKey === "KOMITMEN GO-LIVE" || cleanKey === "KOMITMEN GOLIVE" || cleanKey === "TGL TGT OA";
-             else if (searchHeader === "NO ORDER") return cleanKey === "NO ORDER" || cleanKey === "NO. ORDER" || cleanKey === "NOMOR ORDER" || cleanKey.includes("NO ORDER");
-             else if (searchHeader === "SITE ID") return cleanKey === "SITE ID" || cleanKey === "SITEID";
-             else if (searchHeader === "DETAIL PROGRES" || searchHeader === "DETAIL STATUS") return cleanKey === "DETAIL PROGRES" || cleanKey === "DETAIL PROGRESS" || cleanKey === "DETAIL STATUS";
-             return cleanKey === searchHeader;
+          const matchingKey = Object.keys(row).find((key) => {
+            const cleanKey = key
+              .replace(/[\n\r]+/g, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+              .toUpperCase();
+            if (
+              searchHeader === "KOMITMEN GO-LIVE" ||
+              searchHeader === "KOMITMEN GOLIVE"
+            )
+              return (
+                cleanKey === "KOMITMEN GO-LIVE" ||
+                cleanKey === "KOMITMEN GOLIVE" ||
+                cleanKey === "TGL TGT OA"
+              );
+            else if (searchHeader === "NO ORDER")
+              return (
+                cleanKey === "NO ORDER" ||
+                cleanKey === "NO. ORDER" ||
+                cleanKey === "NOMOR ORDER" ||
+                cleanKey.includes("NO ORDER")
+              );
+            else if (searchHeader === "SITE ID")
+              return cleanKey === "SITE ID" || cleanKey === "SITEID";
+            else if (
+              searchHeader === "DETAIL PROGRES" ||
+              searchHeader === "DETAIL STATUS"
+            )
+              return (
+                cleanKey === "DETAIL PROGRES" ||
+                cleanKey === "DETAIL PROGRESS" ||
+                cleanKey === "DETAIL STATUS"
+              );
+            return cleanKey === searchHeader;
           });
 
-          if (matchingKey && row[matchingKey] !== undefined && row[matchingKey] !== null && row[matchingKey].toString().trim() !== "") {
-              val = row[matchingKey];
+          if (
+            matchingKey &&
+            row[matchingKey] !== undefined &&
+            row[matchingKey] !== null &&
+            row[matchingKey].toString().trim() !== ""
+          ) {
+            val = row[matchingKey];
           }
           return val;
         }
@@ -970,45 +1239,46 @@
         desiredHeaders.forEach((header) => {
           const th = document.createElement("th");
           th.style.cursor = "pointer"; // Ubah kursor jadi ikon tangan saat diarahkan ke judul tabel
-          
+
           // Tambahkan Ikon Panah Sortir
-          let iconHtml = '<i class="fa-solid fa-sort" style="opacity: 0.3; margin-left: 8px;"></i>';
+          let iconHtml =
+            '<i class="fa-solid fa-sort" style="opacity: 0.3; margin-left: 8px;"></i>';
           if (currentSortCol === header) {
-              iconHtml = isAscending 
-                  ? '<i class="fa-solid fa-sort-up" style="margin-left: 8px; color: #3B82F6;"></i>' 
-                  : '<i class="fa-solid fa-sort-down" style="margin-left: 8px; color: #3B82F6;"></i>';
+            iconHtml = isAscending
+              ? '<i class="fa-solid fa-sort-up" style="margin-left: 8px; color: #3B82F6;"></i>'
+              : '<i class="fa-solid fa-sort-down" style="margin-left: 8px; color: #3B82F6;"></i>';
           }
           th.innerHTML = `${header} ${iconHtml}`;
 
           // Event Listener Saat Judul Diklik
           th.addEventListener("click", () => {
-              // Jika kolom yang sama diklik lagi, ubah arahnya (Ascending <-> Descending)
-              if (currentSortCol === header) {
-                  isAscending = !isAscending;
-              } else {
-                  currentSortCol = header;
-                  isAscending = true; // Default langsung urutkan secara Ascending (A-Z)
+            // Jika kolom yang sama diklik lagi, ubah arahnya (Ascending <-> Descending)
+            if (currentSortCol === header) {
+              isAscending = !isAscending;
+            } else {
+              currentSortCol = header;
+              isAscending = true; // Default langsung urutkan secara Ascending (A-Z)
+            }
+
+            // Urutkan Data di Tabel
+            data.sort((a, b) => {
+              let valA = getCellValue(a, header).toString().toLowerCase();
+              let valB = getCellValue(b, header).toString().toLowerCase();
+
+              // Cerdas: Jika datanya berupa angka, urutkan berdasarkan nilai angkanya
+              const numA = parseFloat(valA.replace(/,/g, ""));
+              const numB = parseFloat(valB.replace(/,/g, ""));
+              if (!isNaN(numA) && !isNaN(numB)) {
+                valA = numA;
+                valB = numB;
               }
 
-              // Urutkan Data di Tabel
-              data.sort((a, b) => {
-                  let valA = getCellValue(a, header).toString().toLowerCase();
-                  let valB = getCellValue(b, header).toString().toLowerCase();
+              if (valA < valB) return isAscending ? -1 : 1;
+              if (valA > valB) return isAscending ? 1 : -1;
+              return 0;
+            });
 
-                  // Cerdas: Jika datanya berupa angka, urutkan berdasarkan nilai angkanya
-                  const numA = parseFloat(valA.replace(/,/g, ''));
-                  const numB = parseFloat(valB.replace(/,/g, ''));
-                  if (!isNaN(numA) && !isNaN(numB)) {
-                      valA = numA;
-                      valB = numB;
-                  }
-
-                  if (valA < valB) return isAscending ? -1 : 1;
-                  if (valA > valB) return isAscending ? 1 : -1;
-                  return 0;
-              });
-
-              renderTable(data); // Render ulang tabelnya dengan data yang sudah urut
+            renderTable(data); // Render ulang tabelnya dengan data yang sudah urut
           });
 
           trHead.appendChild(th);
@@ -1035,7 +1305,7 @@
         if (chartDonut) chartDonut.destroy();
         if (chartBar) chartBar.destroy();
         if (chartProgres) chartProgres.destroy();
-        if (chartSla) chartSla.destroy(); 
+        if (chartSla) chartSla.destroy();
 
         const textColor = "#8b949e";
         const gridColor = "#2A3441";
@@ -1046,22 +1316,30 @@
           type: "doughnut",
           data: {
             labels: ["ON AIR/CLOSED", "OPEN", "KENDALA", "DROP"],
-            datasets: [{
-              data: [onAir, open, kendala, drop],
-              backgroundColor: ["#10B981", "#3B82F6", "#F59E0B", "#EF4444"],
-              borderWidth: 0,
-              cutout: "70%", 
-            }],
+            datasets: [
+              {
+                data: [onAir, open, kendala, drop],
+                backgroundColor: ["#10B981", "#3B82F6", "#F59E0B", "#EF4444"],
+                borderWidth: 0,
+                cutout: "70%",
+              },
+            ],
           },
           options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { position: "bottom", labels: { usePointStyle: true, color: textColor } } }
-          }
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: { usePointStyle: true, color: textColor },
+              },
+            },
+          },
         });
 
         // --- 2. Chart Bar (Dinamis: DISTRIK / STO / BRANCH FMC) ---
         const groupData2 = {};
-        let titleChart2 = document.getElementById("titleChart2"); 
+        let titleChart2 = document.getElementById("titleChart2");
 
         data.forEach((item) => {
           let kategoriGroup = "";
@@ -1069,37 +1347,85 @@
           let progLap = "";
 
           if (currentActiveMenu === "NODE-B") {
-             if(titleChart2) titleChart2.innerHTML = `<i class="fa-solid fa-chart-column"></i> DISTRIBUSI STATUS PER DISTRIK`;
-             kategoriGroup = (item["DISTRICT"] || "Uncategorized").trim().toUpperCase();
-             statusLap = (item["Status Lapangan"] || "").toUpperCase();
-             progLap = (item["PROGRES LAPANGAN"] || "").toUpperCase();
+            if (titleChart2)
+              titleChart2.innerHTML = `<i class="fa-solid fa-chart-column"></i> DISTRIBUSI STATUS PER DISTRIK`;
+            kategoriGroup = (item["DISTRICT"] || "Uncategorized")
+              .trim()
+              .toUpperCase();
+            statusLap = (item["Status Lapangan"] || "").toUpperCase();
+            progLap = (item["PROGRES LAPANGAN"] || "").toUpperCase();
           } else if (currentActiveMenu === "HEM SBU") {
-             // Mengubah STO menjadi DISTRICT dan mengganti judul diagramnya
-             if(titleChart2) titleChart2.innerHTML = `<i class="fa-solid fa-chart-column"></i> DISTRIBUSI STATUS PER DISTRIK`;
-             kategoriGroup = (item["DISTRICT"] || item["District"] || "Uncategorized").trim().toUpperCase();
-             
-             statusLap = (item["STATUS JT"] || item["Sub Status"] || "").toUpperCase();
-             progLap = (item["Progress Lapangan"] || "").toUpperCase();
+            // Mengubah STO menjadi DISTRICT dan mengganti judul diagramnya
+            if (titleChart2)
+              titleChart2.innerHTML = `<i class="fa-solid fa-chart-column"></i> DISTRIBUSI STATUS PER DISTRIK`;
+            kategoriGroup = (
+              item["DISTRICT"] ||
+              item["District"] ||
+              "Uncategorized"
+            )
+              .trim()
+              .toUpperCase();
+
+            statusLap = (
+              item["STATUS JT"] ||
+              item["Sub Status"] ||
+              ""
+            ).toUpperCase();
+            progLap = (item["Progress Lapangan"] || "").toUpperCase();
           } else if (currentActiveMenu === "OLO SBU") {
-             if(titleChart2) titleChart2.innerHTML = `<i class="fa-solid fa-chart-column"></i> DISTRIBUSI STATUS PER DISTRIK`;
-             kategoriGroup = (item["DISTRICT"] || "Uncategorized").trim().toUpperCase();
-             statusLap = (item["Sub Status"] || "").toUpperCase();
-             progLap = (item["Progress Lapangan"] || "").toUpperCase();
-          } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
-             if(titleChart2) titleChart2.innerHTML = `<i class="fa-solid fa-sitemap"></i> DISTRIBUSI STATUS PER BRANCH FMC`;
-             kategoriGroup = (item["BRANCH FMC"] || item["Branch Fmc"] || "Uncategorized").trim().toUpperCase();
-             statusLap = (item["Status"] || item["STATUS"] || "").toUpperCase();
-             progLap = (item["SUB STATUS KONS"] || item["Sub Status Kons"] || "").toUpperCase();
+            if (titleChart2)
+              titleChart2.innerHTML = `<i class="fa-solid fa-chart-column"></i> DISTRIBUSI STATUS PER DISTRIK`;
+            kategoriGroup = (item["DISTRICT"] || "Uncategorized")
+              .trim()
+              .toUpperCase();
+            statusLap = (item["Sub Status"] || "").toUpperCase();
+            progLap = (item["Progress Lapangan"] || "").toUpperCase();
+          } else if (
+            currentActiveMenu === "JPP PT3/PT4" ||
+            currentActiveMenu.includes("JPP")
+          ) {
+            if (titleChart2)
+              titleChart2.innerHTML = `<i class="fa-solid fa-sitemap"></i> DISTRIBUSI STATUS PER BRANCH FMC`;
+            kategoriGroup = (
+              item["BRANCH FMC"] ||
+              item["Branch Fmc"] ||
+              "Uncategorized"
+            )
+              .trim()
+              .toUpperCase();
+            statusLap = (item["Status"] || item["STATUS"] || "").toUpperCase();
+            progLap = (
+              item["SUB STATUS KONS"] ||
+              item["Sub Status Kons"] ||
+              ""
+            ).toUpperCase();
           }
 
           if (kategoriGroup === "") return;
-          if (!groupData2[kategoriGroup]) groupData2[kategoriGroup] = { onair: 0, open: 0, kendala: 0, drop: 0 };
+          if (!groupData2[kategoriGroup])
+            groupData2[kategoriGroup] = {
+              onair: 0,
+              open: 0,
+              kendala: 0,
+              drop: 0,
+            };
 
-          if (statusLap.includes("GOLIVE") || progLap.includes("ON AIR") || statusLap.includes("CLOSED") || progLap.includes("DONE") || statusLap === "ON") {
+          if (
+            statusLap.includes("GOLIVE") ||
+            progLap.includes("ON AIR") ||
+            statusLap.includes("CLOSED") ||
+            progLap.includes("DONE") ||
+            statusLap === "ON"
+          ) {
             groupData2[kategoriGroup].onair++;
           } else if (statusLap.includes("DROP") || progLap.includes("DROP")) {
             groupData2[kategoriGroup].drop++;
-          } else if (statusLap.includes("KENDALA") || progLap.includes("REDESIGN") || progLap.includes("HOLD") || progLap.includes("ISSUE")) {
+          } else if (
+            statusLap.includes("KENDALA") ||
+            progLap.includes("REDESIGN") ||
+            progLap.includes("HOLD") ||
+            progLap.includes("ISSUE")
+          ) {
             groupData2[kategoriGroup].kendala++;
           } else {
             groupData2[kategoriGroup].open++;
@@ -1113,40 +1439,84 @@
           data: {
             labels: labelsChart2,
             datasets: [
-              { label: "CLOSED", data: labelsChart2.map((d) => groupData2[d].onair), backgroundColor: "#10B981", borderRadius: 4 },
-              { label: "OPEN", data: labelsChart2.map((d) => groupData2[d].open), backgroundColor: "#3B82F6", borderRadius: 4 },
-              { label: "KENDALA", data: labelsChart2.map((d) => groupData2[d].kendala), backgroundColor: "#F59E0B", borderRadius: 4 },
-              { label: "DROP", data: labelsChart2.map((d) => groupData2[d].drop), backgroundColor: "#EF4444", borderRadius: 4 },
+              {
+                label: "CLOSED",
+                data: labelsChart2.map((d) => groupData2[d].onair),
+                backgroundColor: "#10B981",
+                borderRadius: 4,
+              },
+              {
+                label: "OPEN",
+                data: labelsChart2.map((d) => groupData2[d].open),
+                backgroundColor: "#3B82F6",
+                borderRadius: 4,
+              },
+              {
+                label: "KENDALA",
+                data: labelsChart2.map((d) => groupData2[d].kendala),
+                backgroundColor: "#F59E0B",
+                borderRadius: 4,
+              },
+              {
+                label: "DROP",
+                data: labelsChart2.map((d) => groupData2[d].drop),
+                backgroundColor: "#EF4444",
+                borderRadius: 4,
+              },
             ],
           },
           options: {
-            indexAxis: "y", 
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { position: "top", labels: { usePointStyle: true, color: textColor } } },
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "top",
+                labels: { usePointStyle: true, color: textColor },
+              },
+            },
             scales: {
-              x: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor } },
-              y: { stacked: true, grid: { display: false }, ticks: { color: textColor } },
-            }
-          }
+              x: {
+                stacked: true,
+                grid: { color: gridColor },
+                ticks: { color: textColor },
+              },
+              y: {
+                stacked: true,
+                grid: { display: false },
+                ticks: { color: textColor },
+              },
+            },
+          },
         });
 
-       // --- 3. Chart Progres Lapangan (Berubah jadi Status untuk JPP) ---
+        // --- 3. Chart Progres Lapangan (Berubah jadi Status untuk JPP) ---
         const progresData = {};
         let titleChart3 = document.getElementById("titleChart3");
 
         data.forEach((item) => {
           let prog = "";
-          
+
           if (currentActiveMenu === "NODE-B") {
-             if(titleChart3) titleChart3.innerHTML = `PROGRES LAPANGAN`;
-             prog = (item["PROGRES LAPANGAN"] || "TIDAK ADA DATA").trim();
-          } else if (currentActiveMenu === "HEM SBU" || currentActiveMenu === "OLO SBU") {
-             if(titleChart3) titleChart3.innerHTML = `PROGRES LAPANGAN`;
-             prog = (item["Progress Lapangan"] || "TIDAK ADA DATA").trim();
-          } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
-             // Khusus JPP: Judul berubah, dan data membaca kolom "Status" (P)
-             if(titleChart3) titleChart3.innerHTML = `DISTRIBUSI STATUS`;
-             prog = (item["Status"] || item["STATUS"] || "TIDAK ADA DATA").trim();
+            if (titleChart3) titleChart3.innerHTML = `PROGRES LAPANGAN`;
+            prog = (item["PROGRES LAPANGAN"] || "TIDAK ADA DATA").trim();
+          } else if (
+            currentActiveMenu === "HEM SBU" ||
+            currentActiveMenu === "OLO SBU"
+          ) {
+            if (titleChart3) titleChart3.innerHTML = `PROGRES LAPANGAN`;
+            prog = (item["Progress Lapangan"] || "TIDAK ADA DATA").trim();
+          } else if (
+            currentActiveMenu === "JPP PT3/PT4" ||
+            currentActiveMenu.includes("JPP")
+          ) {
+            // Khusus JPP: Judul berubah, dan data membaca kolom "Status" (P)
+            if (titleChart3) titleChart3.innerHTML = `DISTRIBUSI STATUS`;
+            prog = (
+              item["Status"] ||
+              item["STATUS"] ||
+              "TIDAK ADA DATA"
+            ).trim();
           }
 
           if (prog !== "") progresData[prog] = (progresData[prog] || 0) + 1;
@@ -1158,49 +1528,85 @@
             type: "bar",
             data: {
               labels: Object.keys(progresData),
-              datasets: [{ label: "Jumlah Site", data: Object.values(progresData), backgroundColor: "#8B5CF6", borderRadius: 6 }],
+              datasets: [
+                {
+                  label: "Jumlah Site",
+                  data: Object.values(progresData),
+                  backgroundColor: "#8B5CF6",
+                  borderRadius: 6,
+                },
+              ],
             },
             options: {
-              indexAxis: "y", responsive: true, maintainAspectRatio: false,
+              indexAxis: "y",
+              responsive: true,
+              maintainAspectRatio: false,
               plugins: { legend: { display: false } },
               scales: {
-                x: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                x: {
+                  beginAtZero: true,
+                  grid: { color: gridColor },
+                  ticks: { color: textColor },
+                },
                 y: { grid: { display: false }, ticks: { color: textColor } },
-              }
-            }
+              },
+            },
           });
         }
 
         // --- 4. Chart Dinamis (SLA / SEGMEN / MITRA) ---
         const dynamicData4 = {};
-        let titleChart4 = document.getElementById("titleChart4"); 
+        let titleChart4 = document.getElementById("titleChart4");
 
         data.forEach((item) => {
           let targetValue = "";
-          
+
           if (currentActiveMenu === "NODE-B") {
-             if(titleChart4) titleChart4.innerHTML = `<i class="fa-solid fa-clock"></i> KATEGORI SLA (STATUS ON)`;
-             const statusLap = (item["Status Lapangan"] || "").toUpperCase();
-             const progLap = (item["PROGRES LAPANGAN"] || "").toUpperCase();
-             if (statusLap.includes("ON") || progLap.includes("ON")) {
-                 targetValue = (item["KAT SLA"] || item["KATEGORI SLA"] || "TIDAK ADA DATA").trim();
-             }
+            if (titleChart4)
+              titleChart4.innerHTML = `<i class="fa-solid fa-clock"></i> KATEGORI SLA (STATUS ON)`;
+            const statusLap = (item["Status Lapangan"] || "").toUpperCase();
+            const progLap = (item["PROGRES LAPANGAN"] || "").toUpperCase();
+            if (statusLap.includes("ON") || progLap.includes("ON")) {
+              targetValue = (
+                item["KAT SLA"] ||
+                item["KATEGORI SLA"] ||
+                "TIDAK ADA DATA"
+              ).trim();
+            }
           } else if (currentActiveMenu === "HEM SBU") {
-             // Mengganti judul diagram dan mengubah target datanya ke kolom Sub Status (U)
-             if(titleChart4) titleChart4.innerHTML = `<i class="fa-solid fa-chart-pie"></i> DISTRIBUSI SUB STATUS`;
-             targetValue = (item["Sub Status"] || item["SUB STATUS"] || "TIDAK ADA DATA").trim();
+            // Mengganti judul diagram dan mengubah target datanya ke kolom Sub Status (U)
+            if (titleChart4)
+              titleChart4.innerHTML = `<i class="fa-solid fa-chart-pie"></i> DISTRIBUSI SUB STATUS`;
+            targetValue = (
+              item["Sub Status"] ||
+              item["SUB STATUS"] ||
+              "TIDAK ADA DATA"
+            ).trim();
           } else if (currentActiveMenu === "OLO SBU") {
-             // Mengganti judul diagram dan mengubah target datanya ke kolom Sub Status
-             if(titleChart4) titleChart4.innerHTML = `<i class="fa-solid fa-chart-pie"></i> DISTRIBUSI SUB STATUS`;
-             targetValue = (item["Sub Status"] || item["SUB STATUS"] || "TIDAK ADA DATA").trim();
-          } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
-             // Mengganti judul diagram dan mengubah target datanya ke kolom SUB STATUS KONS
-             if(titleChart4) titleChart4.innerHTML = `<i class="fa-solid fa-chart-pie"></i> DISTRIBUSI SUB STATUS KONS`;
-             targetValue = (item["SUB STATUS KONS"] || item["Sub Status Kons"] || "TIDAK ADA DATA").trim();
+            // Mengganti judul diagram dan mengubah target datanya ke kolom Sub Status
+            if (titleChart4)
+              titleChart4.innerHTML = `<i class="fa-solid fa-chart-pie"></i> DISTRIBUSI SUB STATUS`;
+            targetValue = (
+              item["Sub Status"] ||
+              item["SUB STATUS"] ||
+              "TIDAK ADA DATA"
+            ).trim();
+          } else if (
+            currentActiveMenu === "JPP PT3/PT4" ||
+            currentActiveMenu.includes("JPP")
+          ) {
+            // Mengganti judul diagram dan mengubah target datanya ke kolom SUB STATUS KONS
+            if (titleChart4)
+              titleChart4.innerHTML = `<i class="fa-solid fa-chart-pie"></i> DISTRIBUSI SUB STATUS KONS`;
+            targetValue = (
+              item["SUB STATUS KONS"] ||
+              item["Sub Status Kons"] ||
+              "TIDAK ADA DATA"
+            ).trim();
           }
 
           if (targetValue !== "") {
-             dynamicData4[targetValue] = (dynamicData4[targetValue] || 0) + 1;
+            dynamicData4[targetValue] = (dynamicData4[targetValue] || 0) + 1;
           }
         });
 
@@ -1210,22 +1616,72 @@
             type: "doughnut",
             data: {
               labels: Object.keys(dynamicData4),
-              datasets: [{
-                data: Object.values(dynamicData4),
-                backgroundColor: ["#10B981", "#3B82F6", "#8B5CF6", "#F59E0B", "#EF4444", "#14B8A6", "#EC4899", "#8E44AD"],
-                borderWidth: 0, cutout: "60%",
-              }],
+              datasets: [
+                {
+                  data: Object.values(dynamicData4),
+                  backgroundColor: [
+                    "#10B981",
+                    "#3B82F6",
+                    "#8B5CF6",
+                    "#F59E0B",
+                    "#EF4444",
+                    "#14B8A6",
+                    "#EC4899",
+                    "#8E44AD",
+                  ],
+                  borderWidth: 0,
+                  cutout: "60%",
+                },
+              ],
             },
             options: {
-              responsive: true, maintainAspectRatio: false,
-              plugins: { legend: { position: "right", labels: { usePointStyle: true, color: textColor } } }
-            }
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: "right",
+                  labels: { usePointStyle: true, color: textColor },
+                },
+              },
+            },
           });
         }
       }
       // Inisialisasi awal saat web dibuka
       generateSidebar();
       loadData(gidNodeB);
+      // ==========================================
+      // FUNGSI TOGGLE SIDEBAR UNTUK MOBILE
+      // ==========================================
+      document.addEventListener("DOMContentLoaded", () => {
+        const sidebarToggle = document.getElementById("sidebarToggle"); // Tombol Hamburger
+        const closeSidebarBtn = document.getElementById("closeSidebar"); // Tombol X baru
+        const sidebar = document.querySelector(".sidebar"); 
+
+        // Fungsi membuka/menutup dari tombol hamburger
+        if (sidebarToggle && sidebar) {
+          sidebarToggle.addEventListener("click", () => {
+            sidebar.classList.toggle("active");
+          });
+        }
+
+        // ---> KODE BARU: Fungsi menutup dari tombol X <---
+        if (closeSidebarBtn && sidebar) {
+          closeSidebarBtn.addEventListener("click", () => {
+            sidebar.classList.remove("active");
+          });
+        }
+
+        // Tutup otomatis kalau salah satu menu diklik (agar praktis)
+        const menuItems = document.querySelectorAll(".sidebar .nav-link, .sidebar li"); 
+        menuItems.forEach(item => {
+          item.addEventListener("click", () => {
+            if (window.innerWidth <= 768) {
+              sidebar.classList.remove("active");
+            }
+          });
+        });
+      });
     </script>
   </body>
 </html>
