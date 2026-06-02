@@ -453,7 +453,7 @@
       >
         <!-- Kiri: Progres Lapangan (Porsi lebih lebar) -->
         <div class="card">
-          <div class="card-title">PROGRES LAPANGAN</div>
+          <div class="card-title" id="titleChart3">PROGRES LAPANGAN</div>
           <div class="chart-container" style="min-height: 350px">
             <canvas id="progresChart"></canvas>
           </div>
@@ -1130,10 +1130,25 @@
           }
         });
 
-        // --- 3. Chart Progres Lapangan ---
+       // --- 3. Chart Progres Lapangan (Berubah jadi Status untuk JPP) ---
         const progresData = {};
+        let titleChart3 = document.getElementById("titleChart3");
+
         data.forEach((item) => {
-          const prog = (item["PROGRES LAPANGAN"] || item["Progress Lapangan"] || item["SUB STATUS KONS"] || item["Sub Status Kons"] || "TIDAK ADA DATA").trim();
+          let prog = "";
+          
+          if (currentActiveMenu === "NODE-B") {
+             if(titleChart3) titleChart3.innerHTML = `PROGRES LAPANGAN`;
+             prog = (item["PROGRES LAPANGAN"] || "TIDAK ADA DATA").trim();
+          } else if (currentActiveMenu === "HEM SBU" || currentActiveMenu === "OLO SBU") {
+             if(titleChart3) titleChart3.innerHTML = `PROGRES LAPANGAN`;
+             prog = (item["Progress Lapangan"] || "TIDAK ADA DATA").trim();
+          } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
+             // Khusus JPP: Judul berubah, dan data membaca kolom "Status" (P)
+             if(titleChart3) titleChart3.innerHTML = `DISTRIBUSI STATUS`;
+             prog = (item["Status"] || item["STATUS"] || "TIDAK ADA DATA").trim();
+          }
+
           if (prog !== "") progresData[prog] = (progresData[prog] || 0) + 1;
         });
 
