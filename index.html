@@ -692,7 +692,7 @@
           });
         }
 
-        // 5. Search Teks Berdasarkan Kolom Spesifik (Ultra-Aman)
+       // 5. Search Teks Berdasarkan Kolom Spesifik (Ultra-Aman)
         const searchInput = document.getElementById("searchSiteId");
         const searchColumn = document.getElementById("searchColumn");
 
@@ -704,20 +704,23 @@
             let isMatch = false;
 
             for (let key in item) {
-              let cleanKey = key.trim().toUpperCase();
-
+              // Bersihkan nama kolom Excel dari spasi dan enter
+              let cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
               let isTargetColumn = false;
+
+              // Aturan khusus pengenalan kolom
               if (selectedCol === "SITE ID") {
-                isTargetColumn =
-                  cleanKey === "SITE ID" || cleanKey === "SITEID";
-              } else if (selectedCol === "DETAIL PROGRES") {
-                isTargetColumn =
-                  cleanKey === "DETAIL PROGRES" ||
-                  cleanKey === "DETAIL PROGRESS";
+                isTargetColumn = (cleanKey === "SITE ID" || cleanKey === "SITEID");
+              } else if (selectedCol === "NO ORDER") {
+                isTargetColumn = (cleanKey === "NO ORDER" || cleanKey === "NO. ORDER" || cleanKey === "NOMOR ORDER" || cleanKey.includes("NO ORDER"));
+              } else if (selectedCol === "IHLD" || selectedCol === "ID-IHLD") {
+                // Menyatukan pencarian IHLD dan ID-IHLD agar aman
+                isTargetColumn = (cleanKey === "IHLD" || cleanKey === "ID-IHLD" || cleanKey.includes("IHLD"));
               } else {
-                isTargetColumn = cleanKey === selectedCol;
+                isTargetColumn = (cleanKey === selectedCol);
               }
 
+              // Jika nama kolom cocok, cek isi datanya
               if (isTargetColumn) {
                 let cellValue = item[key];
                 if (cellValue !== null && cellValue !== undefined) {
@@ -725,7 +728,7 @@
                     isMatch = true;
                   }
                 }
-                break; 
+                break; // Stop cari di kolom lain kalau sudah ketemu
               }
             }
 
@@ -770,31 +773,32 @@
           }
         }
 
-        fillDropdown(
-          "Status Lapangan",
-          "filterStatusLap",
-          "Semua Status Lapangan",
-        );
-        fillDropdown(
-          "PROGRES LAPANGAN",
-          "filterProgresLap",
-          "Semua Progres Lapangan",
-        );
-        fillDropdown(
-          "SUB PROGRES LAPANGAN",
-          "filterSubProgresLap",
-          "Semua Sub Progres Lapangan",
-        );
+        fillDropdown("Status Lapangan", "filterStatusLap", "Semua Status Lapangan");
+        fillDropdown("PROGRES LAPANGAN", "filterProgresLap", "Semua Progres Lapangan");
+        fillDropdown("SUB PROGRES LAPANGAN", "filterSubProgresLap", "Semua Sub Progres Lapangan");
 
-        // 2. Search Teks Berdasarkan Kolom Spesifik
-        const searchInput = document.getElementById("searchSiteId");
+        // ---> KODE BARU: UPDATE DROPDOWN PENCARIAN DINAMIS <---
         const searchColumn = document.getElementById("searchColumn");
-
-        if (searchInput) {
-          searchInput.addEventListener("input", applyFilters);
-        }
         if (searchColumn) {
-          searchColumn.addEventListener("change", applyFilters);
+          searchColumn.innerHTML = ""; // Bersihkan opsi lama bawaan HTML
+          let searchOptions = [];
+
+          // Tentukan pilihan kolom pencarian sesuai menu
+          if (currentActiveMenu === "NODE-B") {
+            searchOptions = ["SITE ID", "SITE NAME"];
+          } else if (currentActiveMenu === "HEM SBU" || currentActiveMenu === "OLO SBU") {
+            searchOptions = ["NO ORDER", "IHLD", "NAMA PROYEK"];
+          } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
+            searchOptions = ["ID-IHLD", "NAMA LOP"];
+          }
+
+          // Masukkan pilihan tersebut ke dalam dropdown HTML
+          searchOptions.forEach(opt => {
+            const optionEl = document.createElement("option");
+            optionEl.value = opt;
+            optionEl.textContent = opt;
+            searchColumn.appendChild(optionEl);
+          });
         }
       }
 
@@ -914,9 +918,17 @@
             "PROGRES LAPANGAN", "SUB PROGRES LAPANGAN", "KOMITMEN GO-LIVE", "DETAIL PROGRES"
           ];
         } else if (currentActiveMenu === "HEM SBU") {
+          // Susunan baru HEM SBU: AP - E - F - C - R - T - U - X - W
           desiredHeaders = [
-            "STO", "UNSC/PROJECT", "SEGMEN", "TIPE DESAIN 2", "TIPE DESAIN", 
-            "Subkon", "Progress Lapangan", "NDE WORK ORDER KE TA", "STATUS JT", "Sub Status"
+            "NO ORDER",
+            "IHLD",               // E
+            "NAMA PROYEK",        // F
+            "DISTRICT",           // C (Ganti jadi "STO" jika ternyata maksudmu STO)
+            "Mitra",              // R
+            "Progress Lapangan",  // T
+            "Sub Status",         // U
+            "Komitmen Golive",    // X
+            "Detail Progres"      // W
           ];
         } else if (currentActiveMenu === "OLO SBU") {
           desiredHeaders = [
@@ -1062,8 +1074,10 @@
              statusLap = (item["Status Lapangan"] || "").toUpperCase();
              progLap = (item["PROGRES LAPANGAN"] || "").toUpperCase();
           } else if (currentActiveMenu === "HEM SBU") {
-             if(titleChart2) titleChart2.innerHTML = `<i class="fa-solid fa-building"></i> DISTRIBUSI STATUS PER STO`;
-             kategoriGroup = (item["STO"] || "Uncategorized").trim().toUpperCase();
+             // Mengubah STO menjadi DISTRICT dan mengganti judul diagramnya
+             if(titleChart2) titleChart2.innerHTML = `<i class="fa-solid fa-chart-column"></i> DISTRIBUSI STATUS PER DISTRIK`;
+             kategoriGroup = (item["DISTRICT"] || item["District"] || "Uncategorized").trim().toUpperCase();
+             
              statusLap = (item["STATUS JT"] || item["Sub Status"] || "").toUpperCase();
              progLap = (item["Progress Lapangan"] || "").toUpperCase();
           } else if (currentActiveMenu === "OLO SBU") {
@@ -1157,14 +1171,17 @@
                  targetValue = (item["KAT SLA"] || item["KATEGORI SLA"] || "TIDAK ADA DATA").trim();
              }
           } else if (currentActiveMenu === "HEM SBU") {
-             if(titleChart4) titleChart4.innerHTML = `<i class="fa-solid fa-layer-group"></i> DISTRIBUSI SEGMEN`;
-             targetValue = (item["SEGMEN"] || "TIDAK ADA DATA").trim();
+             // Mengganti judul diagram dan mengubah target datanya ke kolom Sub Status (U)
+             if(titleChart4) titleChart4.innerHTML = `<i class="fa-solid fa-chart-pie"></i> DISTRIBUSI SUB STATUS`;
+             targetValue = (item["Sub Status"] || item["SUB STATUS"] || "TIDAK ADA DATA").trim();
           } else if (currentActiveMenu === "OLO SBU") {
-             if(titleChart4) titleChart4.innerHTML = `<i class="fa-solid fa-handshake"></i> DISTRIBUSI MITRA`;
-             targetValue = (item["Mitra"] || item["MITRA"] || "TIDAK ADA DATA").trim();
+             // Mengganti judul diagram dan mengubah target datanya ke kolom Sub Status
+             if(titleChart4) titleChart4.innerHTML = `<i class="fa-solid fa-chart-pie"></i> DISTRIBUSI SUB STATUS`;
+             targetValue = (item["Sub Status"] || item["SUB STATUS"] || "TIDAK ADA DATA").trim();
           } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
-             if(titleChart4) titleChart4.innerHTML = `<i class="fa-solid fa-handshake"></i> DISTRIBUSI MITRA`;
-             targetValue = (item["Mitra"] || item["MITRA"] || "TIDAK ADA DATA").trim();
+             // Mengganti judul diagram dan mengubah target datanya ke kolom SUB STATUS KONS
+             if(titleChart4) titleChart4.innerHTML = `<i class="fa-solid fa-chart-pie"></i> DISTRIBUSI SUB STATUS KONS`;
+             targetValue = (item["SUB STATUS KONS"] || item["Sub Status Kons"] || "TIDAK ADA DATA").trim();
           }
 
           if (targetValue !== "") {
