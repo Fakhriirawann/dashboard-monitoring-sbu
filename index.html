@@ -538,6 +538,7 @@
       const gidNodeB = "704502274"; // GID untuk NODE-B
       const gidHemSbu = "363406545"; // GID untuk HEM SBU
       const gidOloSbu = "503094043";
+      const gidJpp = "0";
 
       let globalData = [];
       let chartDonut = null;
@@ -562,17 +563,32 @@
           complete: function (results) {
             const rawArray = results.data;
 
-            // Deteksi baris mana yang merupakan Judul Kolom (Header)
+            // ==========================================
+            // 1. DETEKSI BARIS JUDUL (RADAR ANTI-JEBAKAN)
+            // ==========================================
             let headerRowIndex = 0;
-            for (let i = 0; i < Math.min(10, rawArray.length); i++) {
-              // Diperluas agar bisa mendeteksi header di sheet HEM SBU juga
-              if (
-                rawArray[i] &&
-                (rawArray[i].includes("REGION") ||
-                  rawArray[i].includes("DISTRICT") ||
-                  rawArray[i].includes("NO") ||
-                  rawArray[i].includes("SITE ID"))
-              ) {
+            for (let i = 0; i < Math.min(15, rawArray.length); i++) {
+              if (!rawArray[i]) continue;
+              
+              let matchCount = 0;
+              
+              // Periksa setiap sel di baris ini
+              rawArray[i].forEach(cell => {
+                const text = (cell || "").toString().replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+                
+                // Jika sel mengandung nama kolom penting, tambah poin kecocokan
+                if (text === "SITE ID" || text === "ID-IHLD" || 
+                    text === "NO ORDER" || text === "NO." || text === "NO" || 
+                    text === "REGIONAL" || text === "REGION" || 
+                    text === "DISTRICT" || text === "STO" || 
+                    text === "BRANCH FMC" || text === "NAMA LOP" || 
+                    text === "SUB STATUS KONS" || text === "STATUS" || text === "MITRA") {
+                   matchCount++;
+                }
+              });
+
+              // WAJIB KETEMU MINIMAL 3 NAMA KOLOM agar tidak tertipu baris judul laporan!
+              if (matchCount >= 3) {
                 headerRowIndex = i;
                 break;
               }
@@ -581,10 +597,24 @@
             const headers = rawArray[headerRowIndex];
             const dataRows = rawArray.slice(headerRowIndex + 1);
 
+            // ==========================================
+            // 2. PEMBENTUKAN DATA (HURUF BESAR GANDA)
+            // ==========================================
             globalData = dataRows.map((row) => {
               let obj = {};
               headers.forEach((head, index) => {
-                if (head) obj[head.trim()] = row[index];
+                if (head) {
+                  // Bersihkan teks dari spasi dan enter
+                  let headerName = head.toString().replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim();
+                  
+                  // Buat versi HURUF BESAR SEMUA sebagai cadangan anti-gagal
+                  let safeHeader = headerName.toUpperCase(); 
+                  
+                  if (!obj.hasOwnProperty(headerName)) {
+                    obj[headerName] = row[index]; // Simpan nama asli
+                    obj[safeHeader] = row[index]; // Simpan kloningan huruf besar (misal: "SUB STATUS KONS")
+                  }
+                }
               });
               return obj;
             });
@@ -802,6 +832,12 @@
             currentActiveMenu = "OLO SBU";
             loadData(gidOloSbu); 
         });
+        // Klik Menu JPP PT3/PT4 (KODE BARU - GANTIKAN BLOK MENU KOSONG)
+        document.getElementById("menu-jpp").addEventListener("click", function () {
+            setActiveMenu(this);
+            currentActiveMenu = "JPP PT3/PT4";
+            loadData(gidJpp); 
+        });
 
         // Klik Menu Kosong Lainnya (Tinggal JPP saja)
         const menuKosong = ["menu-jpp"];
@@ -820,7 +856,7 @@
         clickedElement.classList.add("active");
       }
 
-      // ==========================================
+     // ==========================================
       // 3. UPDATE KESELURUHAN (KPI & TABEL)
       // ==========================================
       function updateDashboard(dataToRender) {
@@ -840,9 +876,12 @@
             statusLap = (item["STATUS JT"] || item["Sub Status"] || "").toUpperCase();
             progLap = (item["Progress Lapangan"] || "").toUpperCase();
           } else if (currentActiveMenu === "OLO SBU") {
-            // OLO SBU membaca Sub Status
             statusLap = (item["Sub Status"] || "").toUpperCase();
             progLap = (item["Progress Lapangan"] || "").toUpperCase();
+          } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
+            // Ditambah pengaman .includes("JPP") dan bacaan huruf besar
+            statusLap = (item["Status"] || item["STATUS"] || "").toUpperCase();
+            progLap = (item["SUB STATUS KONS"] || item["Sub Status Kons"] || "").toUpperCase();
           }
 
           // Menghitung jumlah masing-masing status
@@ -909,6 +948,19 @@
               "Komitmen Golive",    // U
               "Detail Progres"      // T
             ];
+        }else if (currentActiveMenu === "JPP PT3/PT4") {
+            // Urutan Kolom JPP: C, D, I, G, P, Q, O, S, R
+            desiredHeaders = [
+              "ID-IHLD",          // C
+              "NAMA LOP",         // D
+              "BRANCH FMC",       // I
+              "STO",              // G
+              "Status",           // P
+              "SUB STATUS KONS",  // Q
+              "Mitra",            // O
+              "KOMITMEN GOLIVE",  
+              "DETAIL STATUS"   
+            ];
         }
         const trHead = document.createElement("tr");
         desiredHeaders.forEach((header) => {
@@ -918,26 +970,45 @@
         });
         tableHead.appendChild(trHead);
 
-        // Render Isi Tabel
+       // Render Isi Tabel
         data.forEach((row) => {
           const tr = document.createElement("tr");
           desiredHeaders.forEach((header) => {
             const td = document.createElement("td");
 
-            // Logika aman pembacaan kolom
             let cellValue = "-";
-            if (header === "KOMITMEN GO-LIVE") {
-              cellValue =
-                row["KOMITMEN GO-LIVE"] ||
-                row["KOMITMEN GOLIVE"] ||
-                row["TGL TGT OA"] ||
-                "-";
-            } else {
-              cellValue =
-                row[header] ||
-                row[header.toUpperCase()] ||
-                row[header.replace(" ", "")] ||
-                "-";
+            
+            // 1. Bersihkan nama header yang kita cari (jadikan huruf besar, ganti spasi ganda jadi spasi tunggal)
+            const searchHeader = header.replace(/\s+/g, " ").trim().toUpperCase();
+
+            // 2. Cari nama kolom aslinya di data Excel, abaikan Enter (\n) atau spasi berantakan
+            const matchingKey = Object.keys(row).find(key => {
+               // regex ini juga akan menangani karakter spasi gaib (non-breaking space) dari Excel
+               const cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+               
+               // Aturan khusus untuk kolom Komitmen Go-Live
+               if (searchHeader === "KOMITMEN GO-LIVE") {
+                   return cleanKey === "KOMITMEN GO-LIVE" || cleanKey === "KOMITMEN GOLIVE" || cleanKey === "TGL TGT OA";
+               }
+               // Aturan khusus untuk kolom NO ORDER
+               else if (searchHeader === "NO ORDER") {
+                   return cleanKey === "NO ORDER" || cleanKey === "NO. ORDER" || cleanKey === "NOMOR ORDER" || cleanKey.includes("NO ORDER");
+               }
+               // Aturan khusus untuk kolom SITE ID (Menangkap penulisan SITEID tanpa spasi)
+               else if (searchHeader === "SITE ID") {
+                   return cleanKey === "SITE ID" || cleanKey === "SITEID";
+               }
+               // Aturan khusus untuk kolom DETAIL PROGRES (Menangkap penulisan pakai 'SS')
+               else if (searchHeader === "DETAIL PROGRES") {
+                   return cleanKey === "DETAIL PROGRES" || cleanKey === "DETAIL PROGRESS";
+               }
+               
+               return cleanKey === searchHeader;
+            });
+
+            // 3. Jika kolom ketemu dan sel tersebut ada isinya (bukan kosong), tampilkan datanya
+            if (matchingKey && row[matchingKey] !== undefined && row[matchingKey] !== null && row[matchingKey].toString().trim() !== "") {
+                cellValue = row[matchingKey];
             }
 
             td.textContent = cellValue;
@@ -946,10 +1017,6 @@
           tableBody.appendChild(tr);
         });
       }
-
-      // ==========================================
-      // 4. RENDER CHART
-      // ==========================================
       // ==========================================
       // 4. RENDER CHART DINAMIS BERDASARKAN MENU
       // ==========================================
@@ -972,7 +1039,7 @@
               data: [onAir, open, kendala, drop],
               backgroundColor: ["#10B981", "#3B82F6", "#F59E0B", "#EF4444"],
               borderWidth: 0,
-              cutout: "70%", // Dibuat lebih tipis agar elegan
+              cutout: "70%", 
             }],
           },
           options: {
@@ -981,16 +1048,15 @@
           }
         });
 
-        // --- 2. Chart Bar (Dinamis: NODE-B = DISTRIK | HEM SBU = STO) ---
+        // --- 2. Chart Bar (Dinamis: DISTRIK / STO / BRANCH FMC) ---
         const groupData2 = {};
-        let titleChart2 = document.getElementById("titleChart2"); // Membaca ID judul di HTML
+        let titleChart2 = document.getElementById("titleChart2"); 
 
         data.forEach((item) => {
           let kategoriGroup = "";
           let statusLap = "";
           let progLap = "";
 
-          // Cek sedang di menu apa untuk menentukan data dan judul chart bar
           if (currentActiveMenu === "NODE-B") {
              if(titleChart2) titleChart2.innerHTML = `<i class="fa-solid fa-chart-column"></i> DISTRIBUSI STATUS PER DISTRIK`;
              kategoriGroup = (item["DISTRICT"] || "Uncategorized").trim().toUpperCase();
@@ -1006,12 +1072,16 @@
              kategoriGroup = (item["DISTRICT"] || "Uncategorized").trim().toUpperCase();
              statusLap = (item["Sub Status"] || "").toUpperCase();
              progLap = (item["Progress Lapangan"] || "").toUpperCase();
+          } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
+             if(titleChart2) titleChart2.innerHTML = `<i class="fa-solid fa-sitemap"></i> DISTRIBUSI STATUS PER BRANCH FMC`;
+             kategoriGroup = (item["BRANCH FMC"] || item["Branch Fmc"] || "Uncategorized").trim().toUpperCase();
+             statusLap = (item["Status"] || item["STATUS"] || "").toUpperCase();
+             progLap = (item["SUB STATUS KONS"] || item["Sub Status Kons"] || "").toUpperCase();
           }
 
           if (kategoriGroup === "") return;
           if (!groupData2[kategoriGroup]) groupData2[kategoriGroup] = { onair: 0, open: 0, kendala: 0, drop: 0 };
 
-          // Kelompokkan Statusnya
           if (statusLap.includes("GOLIVE") || progLap.includes("ON AIR") || statusLap.includes("CLOSED") || progLap.includes("DONE") || statusLap === "ON") {
             groupData2[kategoriGroup].onair++;
           } else if (statusLap.includes("DROP") || progLap.includes("DROP")) {
@@ -1037,7 +1107,7 @@
             ],
           },
           options: {
-            indexAxis: "y", // Posisi horizontal agar nama STO/Distrik terbaca rapi
+            indexAxis: "y", 
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { position: "top", labels: { usePointStyle: true, color: textColor } } },
             scales: {
@@ -1050,8 +1120,7 @@
         // --- 3. Chart Progres Lapangan ---
         const progresData = {};
         data.forEach((item) => {
-          // Mengakomodasi nama kolom "PROGRES LAPANGAN" (Node-B) dan "Progress Lapangan" (HEM SBU)
-          const prog = (item["PROGRES LAPANGAN"] || item["Progress Lapangan"] || "TIDAK ADA DATA").trim();
+          const prog = (item["PROGRES LAPANGAN"] || item["Progress Lapangan"] || item["SUB STATUS KONS"] || item["Sub Status Kons"] || "TIDAK ADA DATA").trim();
           if (prog !== "") progresData[prog] = (progresData[prog] || 0) + 1;
         });
 
@@ -1074,9 +1143,9 @@
           });
         }
 
-        // --- 4. Chart Dinamis (NODE-B: Kategori SLA | HEM SBU: Distribusi Segmen) ---
+        // --- 4. Chart Dinamis (SLA / SEGMEN / MITRA) ---
         const dynamicData4 = {};
-        let titleChart4 = document.getElementById("titleChart4"); // Membaca ID judul di HTML
+        let titleChart4 = document.getElementById("titleChart4"); 
 
         data.forEach((item) => {
           let targetValue = "";
@@ -1094,6 +1163,9 @@
           } else if (currentActiveMenu === "OLO SBU") {
              if(titleChart4) titleChart4.innerHTML = `<i class="fa-solid fa-handshake"></i> DISTRIBUSI MITRA`;
              targetValue = (item["Mitra"] || item["MITRA"] || "TIDAK ADA DATA").trim();
+          } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
+             if(titleChart4) titleChart4.innerHTML = `<i class="fa-solid fa-handshake"></i> DISTRIBUSI MITRA`;
+             targetValue = (item["Mitra"] || item["MITRA"] || "TIDAK ADA DATA").trim();
           }
 
           if (targetValue !== "") {
@@ -1109,7 +1181,6 @@
               labels: Object.keys(dynamicData4),
               datasets: [{
                 data: Object.values(dynamicData4),
-                // Tambahan variasi warna
                 backgroundColor: ["#10B981", "#3B82F6", "#8B5CF6", "#F59E0B", "#EF4444", "#14B8A6", "#EC4899", "#8E44AD"],
                 borderWidth: 0, cutout: "60%",
               }],
