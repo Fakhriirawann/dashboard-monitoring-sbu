@@ -541,6 +541,8 @@
       const gidJpp = "0";
 
       let globalData = [];
+      let currentSortCol = "";
+      let isAscending = true;
       let chartDonut = null;
       let chartBar = null;
       let chartProgres = null;
@@ -905,102 +907,110 @@
         if (data.length === 0) return;
         let desiredHeaders = [];
 
-        // Cek menu apa yang sedang aktif
+        // Penentuan Header sesuai Menu Aktif
         if (currentActiveMenu === "NODE-B") {
           desiredHeaders = [
-            "SITE ID",
-            "STO",
-            "SITE NAME",
-            "MITRA",
-            "Status Lapangan",
-            "PROGRES LAPANGAN",
-            "SUB PROGRES LAPANGAN",
-            "KOMITMEN GO-LIVE",
-            "DETAIL PROGRES",
+            "SITE ID", "STO", "SITE NAME", "MITRA", "Status Lapangan", 
+            "PROGRES LAPANGAN", "SUB PROGRES LAPANGAN", "KOMITMEN GO-LIVE", "DETAIL PROGRES"
           ];
         } else if (currentActiveMenu === "HEM SBU") {
-            desiredHeaders = [
-              "STO", "UNSC/PROJECT", "SEGMEN", "TIPE DESAIN 2", "TIPE DESAIN", 
-              "Subkon", "Progress Lapangan", "NDE WORK ORDER KE TA", "STATUS JT", "Sub Status"
-            ];
+          desiredHeaders = [
+            "STO", "UNSC/PROJECT", "SEGMEN", "TIPE DESAIN 2", "TIPE DESAIN", 
+            "Subkon", "Progress Lapangan", "NDE WORK ORDER KE TA", "STATUS JT", "Sub Status"
+          ];
         } else if (currentActiveMenu === "OLO SBU") {
-            // Urutan Kolom OLO SBU: C, H, G, L, K, R, S, P, U, T
-            desiredHeaders = [
-              "NO ORDER",           // C
-              "IHLD",               // H
-              "NAMA PROYEK",        // G
-              "DISTRICT",           // L
-              "STO",                // K
-              "Progress Lapangan",  // R
-              "Sub Status",         // S
-              "Mitra",              // P
-              "Komitmen Golive",    // U
-              "Detail Progres"      // T
-            ];
-        }else if (currentActiveMenu === "JPP PT3/PT4") {
-            // Urutan Kolom JPP: C, D, I, G, P, Q, O, S, R
-            desiredHeaders = [
-              "ID-IHLD",          // C
-              "NAMA LOP",         // D
-              "BRANCH FMC",       // I
-              "STO",              // G
-              "Status",           // P
-              "SUB STATUS KONS",  // Q
-              "Mitra",            // O
-              "KOMITMEN GOLIVE",  
-              "DETAIL STATUS"   
-            ];
+          desiredHeaders = [
+            "NO ORDER", "IHLD", "NAMA PROYEK", "DISTRICT", "STO", 
+            "Progress Lapangan", "Sub Status", "Mitra", "Komitmen Golive", "Detail Progres"
+          ];
+        } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
+          desiredHeaders = [
+            "ID-IHLD", "NAMA LOP", "BRANCH FMC", "STO", "Status", 
+            "SUB STATUS KONS", "Mitra", "KOMITMEN GOLIVE", "DETAIL STATUS"
+          ];
         }
+
+        // =========================================================
+        // FUNGSI HELPER: Pengambil Nilai Sel Anti-Error & Anti-Spasi
+        // =========================================================
+        function getCellValue(row, header) {
+          let val = "-";
+          const searchHeader = header.replace(/\s+/g, " ").trim().toUpperCase();
+          const matchingKey = Object.keys(row).find(key => {
+             const cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+             if (searchHeader === "KOMITMEN GO-LIVE" || searchHeader === "KOMITMEN GOLIVE") return cleanKey === "KOMITMEN GO-LIVE" || cleanKey === "KOMITMEN GOLIVE" || cleanKey === "TGL TGT OA";
+             else if (searchHeader === "NO ORDER") return cleanKey === "NO ORDER" || cleanKey === "NO. ORDER" || cleanKey === "NOMOR ORDER" || cleanKey.includes("NO ORDER");
+             else if (searchHeader === "SITE ID") return cleanKey === "SITE ID" || cleanKey === "SITEID";
+             else if (searchHeader === "DETAIL PROGRES" || searchHeader === "DETAIL STATUS") return cleanKey === "DETAIL PROGRES" || cleanKey === "DETAIL PROGRESS" || cleanKey === "DETAIL STATUS";
+             return cleanKey === searchHeader;
+          });
+
+          if (matchingKey && row[matchingKey] !== undefined && row[matchingKey] !== null && row[matchingKey].toString().trim() !== "") {
+              val = row[matchingKey];
+          }
+          return val;
+        }
+
+        // =========================================================
+        // RENDER HEADER DENGAN FITUR SORTING (KLIK)
+        // =========================================================
         const trHead = document.createElement("tr");
         desiredHeaders.forEach((header) => {
           const th = document.createElement("th");
-          th.textContent = header;
+          th.style.cursor = "pointer"; // Ubah kursor jadi ikon tangan saat diarahkan ke judul tabel
+          
+          // Tambahkan Ikon Panah Sortir
+          let iconHtml = '<i class="fa-solid fa-sort" style="opacity: 0.3; margin-left: 8px;"></i>';
+          if (currentSortCol === header) {
+              iconHtml = isAscending 
+                  ? '<i class="fa-solid fa-sort-up" style="margin-left: 8px; color: #3B82F6;"></i>' 
+                  : '<i class="fa-solid fa-sort-down" style="margin-left: 8px; color: #3B82F6;"></i>';
+          }
+          th.innerHTML = `${header} ${iconHtml}`;
+
+          // Event Listener Saat Judul Diklik
+          th.addEventListener("click", () => {
+              // Jika kolom yang sama diklik lagi, ubah arahnya (Ascending <-> Descending)
+              if (currentSortCol === header) {
+                  isAscending = !isAscending;
+              } else {
+                  currentSortCol = header;
+                  isAscending = true; // Default langsung urutkan secara Ascending (A-Z)
+              }
+
+              // Urutkan Data di Tabel
+              data.sort((a, b) => {
+                  let valA = getCellValue(a, header).toString().toLowerCase();
+                  let valB = getCellValue(b, header).toString().toLowerCase();
+
+                  // Cerdas: Jika datanya berupa angka, urutkan berdasarkan nilai angkanya
+                  const numA = parseFloat(valA.replace(/,/g, ''));
+                  const numB = parseFloat(valB.replace(/,/g, ''));
+                  if (!isNaN(numA) && !isNaN(numB)) {
+                      valA = numA;
+                      valB = numB;
+                  }
+
+                  if (valA < valB) return isAscending ? -1 : 1;
+                  if (valA > valB) return isAscending ? 1 : -1;
+                  return 0;
+              });
+
+              renderTable(data); // Render ulang tabelnya dengan data yang sudah urut
+          });
+
           trHead.appendChild(th);
         });
         tableHead.appendChild(trHead);
 
-       // Render Isi Tabel
+        // =========================================================
+        // RENDER ISI TABEL
+        // =========================================================
         data.forEach((row) => {
           const tr = document.createElement("tr");
           desiredHeaders.forEach((header) => {
             const td = document.createElement("td");
-
-            let cellValue = "-";
-            
-            // 1. Bersihkan nama header yang kita cari (jadikan huruf besar, ganti spasi ganda jadi spasi tunggal)
-            const searchHeader = header.replace(/\s+/g, " ").trim().toUpperCase();
-
-            // 2. Cari nama kolom aslinya di data Excel, abaikan Enter (\n) atau spasi berantakan
-            const matchingKey = Object.keys(row).find(key => {
-               // regex ini juga akan menangani karakter spasi gaib (non-breaking space) dari Excel
-               const cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
-               
-               // Aturan khusus untuk kolom Komitmen Go-Live
-               if (searchHeader === "KOMITMEN GO-LIVE") {
-                   return cleanKey === "KOMITMEN GO-LIVE" || cleanKey === "KOMITMEN GOLIVE" || cleanKey === "TGL TGT OA";
-               }
-               // Aturan khusus untuk kolom NO ORDER
-               else if (searchHeader === "NO ORDER") {
-                   return cleanKey === "NO ORDER" || cleanKey === "NO. ORDER" || cleanKey === "NOMOR ORDER" || cleanKey.includes("NO ORDER");
-               }
-               // Aturan khusus untuk kolom SITE ID (Menangkap penulisan SITEID tanpa spasi)
-               else if (searchHeader === "SITE ID") {
-                   return cleanKey === "SITE ID" || cleanKey === "SITEID";
-               }
-               // Aturan khusus untuk kolom DETAIL PROGRES (Menangkap penulisan pakai 'SS')
-               else if (searchHeader === "DETAIL PROGRES") {
-                   return cleanKey === "DETAIL PROGRES" || cleanKey === "DETAIL PROGRESS";
-               }
-               
-               return cleanKey === searchHeader;
-            });
-
-            // 3. Jika kolom ketemu dan sel tersebut ada isinya (bukan kosong), tampilkan datanya
-            if (matchingKey && row[matchingKey] !== undefined && row[matchingKey] !== null && row[matchingKey].toString().trim() !== "") {
-                cellValue = row[matchingKey];
-            }
-
-            td.textContent = cellValue;
+            td.textContent = getCellValue(row, header);
             tr.appendChild(td);
           });
           tableBody.appendChild(tr);
