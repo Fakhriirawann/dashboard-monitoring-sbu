@@ -441,31 +441,32 @@
           <div class="chart-container"><canvas id="donutChart"></canvas></div>
         </div>
         <div class="card">
-          <div class="card-title">DISTRIBUSI DISTRICT</div>
+          <div class="card-title" id="titleChart2"><i class="fa-solid fa-chart-column"></i>DISTRIBUSI DISTRICT</div>
           <div class="chart-container"><canvas id="mainBarChart"></canvas></div>
         </div>
       </div>
       <!-- Tambahkan Chart Baru Ini -->
       <!-- Split Screen: Progres Lapangan (Lebar) & Kategori SLA (Sedang) -->
-            <div class="chart-grid" style="grid-template-columns: 1.8fr 1fr; gap: 20px; margin-top: 20px;">
-                
-                <!-- Kiri: Progres Lapangan (Porsi lebih lebar) -->
-                <div class="card">
-                    <div class="card-title">PROGRES LAPANGAN</div>
-                    <div class="chart-container" style="min-height: 350px;">
-                        <canvas id="progresChart"></canvas>
-                    </div>
-                </div>
+      <div
+        class="chart-grid"
+        style="grid-template-columns: 1.8fr 1fr; gap: 20px; margin-top: 20px"
+      >
+        <!-- Kiri: Progres Lapangan (Porsi lebih lebar) -->
+        <div class="card">
+          <div class="card-title">PROGRES LAPANGAN</div>
+          <div class="chart-container" style="min-height: 350px">
+            <canvas id="progresChart"></canvas>
+          </div>
+        </div>
 
-                <!-- Kanan: Kategori SLA (ON) (Porsi sedang) -->
-                <div class="card">
-                    <div class="card-title">KATEGORI SLA (STATUS ON)</div>
-                    <div class="chart-container" style="min-height: 350px;">
-                        <canvas id="slaChart"></canvas>
-                    </div>
-                </div>
-
-            </div>
+        <!-- Kanan: Kategori SLA (ON) (Porsi sedang) -->
+        <div class="card">
+          <div class="card-title" id="titleChart4"> <i class="fa-solid fa-clock"></i>KATEGORI SLA (STATUS ON)</div>
+          <div class="chart-container" style="min-height: 350px">
+            <canvas id="slaChart"></canvas>
+          </div>
+        </div>
+      </div>
       <div class="card" style="padding: 0; border: none">
         <div
           id="loadingIndicator"
@@ -475,15 +476,26 @@
           Spreadsheet...
         </div>
         <div class="table-filters">
-        <select id="searchColumn" class="btn-action" onchange="applyFilters()" style="outline: none; flex: 0.5; min-width: 130px;">
-                    <option value="SITE ID">SITE ID</option>
-                    <option value="SITE NAME">SITE NAME</option>
-                    <option value="STO">STO</option>
-                    <option value="MITRA">MITRA</option>
-                    <option value="DETAIL PROGRES">DETAIL PROGRES</option>
-                </select>
-                
-                <input type="text" id="searchSiteId" class="search-input" oninput="applyFilters()" placeholder="Ketik pencarian di sini...">
+          <select
+            id="searchColumn"
+            class="btn-action"
+            onchange="applyFilters()"
+            style="outline: none; flex: 0.5; min-width: 130px"
+          >
+            <option value="SITE ID">SITE ID</option>
+            <option value="SITE NAME">SITE NAME</option>
+            <option value="STO">STO</option>
+            <option value="MITRA">MITRA</option>
+            <option value="DETAIL PROGRES">DETAIL PROGRES</option>
+          </select>
+
+          <input
+            type="text"
+            id="searchSiteId"
+            class="search-input"
+            oninput="applyFilters()"
+            placeholder="Ketik pencarian di sini..."
+          />
           <select
             id="filterStatusLap"
             class="btn-action"
@@ -523,107 +535,84 @@
       Chart.defaults.borderColor = "#2A3441";
 
       const sheetId = "1KcNQemdjeEdwbUgD1wLKs9X3RDnYzB-h10bSX5ryurk";
-      const gid = "704502274";
-      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+      const gidNodeB = "704502274"; // GID untuk NODE-B
+      const gidHemSbu = "363406545"; // GID untuk HEM SBU
+      const gidOloSbu = "503094043";
 
       let globalData = [];
       let chartDonut = null;
       let chartBar = null;
       let chartProgres = null;
       let chartSla = null;
-      let currentActiveMenu = "Semua Data";
+      let currentActiveMenu = "NODE-B";
 
       // ==========================================
       // 1. DATA FETCHING DENGAN AUTO-DETEKSI HEADER
       // ==========================================
-      Papa.parse(csvUrl, {
-        download: true,
-        header: false,
-        skipEmptyLines: true,
-        complete: function (results) {
-          const rawArray = results.data;
+      function loadData(gid) {
+        document.getElementById("loadingIndicator").style.display = "block";
+        document.getElementById("dataTable").style.display = "none";
 
-          let headerRowIndex = 0;
-          for (let i = 0; i < Math.min(10, rawArray.length); i++) {
-            if (
-              rawArray[i] &&
-              (rawArray[i].includes("REGION") ||
-                rawArray[i].includes("DISTRICT"))
-            ) {
-              headerRowIndex = i;
-              break;
+        const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+
+        Papa.parse(csvUrl, {
+          download: true,
+          header: false,
+          skipEmptyLines: true,
+          complete: function (results) {
+            const rawArray = results.data;
+
+            // Deteksi baris mana yang merupakan Judul Kolom (Header)
+            let headerRowIndex = 0;
+            for (let i = 0; i < Math.min(10, rawArray.length); i++) {
+              // Diperluas agar bisa mendeteksi header di sheet HEM SBU juga
+              if (
+                rawArray[i] &&
+                (rawArray[i].includes("REGION") ||
+                  rawArray[i].includes("DISTRICT") ||
+                  rawArray[i].includes("NO") ||
+                  rawArray[i].includes("SITE ID"))
+              ) {
+                headerRowIndex = i;
+                break;
+              }
             }
-          }
 
-          const headers = rawArray[headerRowIndex];
-          const dataRows = rawArray.slice(headerRowIndex + 1);
+            const headers = rawArray[headerRowIndex];
+            const dataRows = rawArray.slice(headerRowIndex + 1);
 
-          globalData = dataRows.map((row) => {
-            let obj = {};
-            headers.forEach((head, index) => {
-              if (head) obj[head.trim()] = row[index];
-            });
-            return obj;
-          });
-
-          document.getElementById("loadingIndicator").style.display = "none";
-          document.getElementById("dataTable").style.display = "table";
-
-          // --- Inisialisasi Dropdown Distrik ---
-          // --- Inisialisasi Dropdown Distrik (Tanpa Duplikat Huruf Kecil/Besar) ---
-          // Seragamkan semua teks menjadi huruf kapital (toUpperCase) sebelum dimasukkan ke Set
-          const rawDistricts = globalData
-            .map((item) => (item["DISTRICT"] || "").trim().toUpperCase())
-            .filter(Boolean);
-          const distrikUnik = [...new Set(rawDistricts)].sort();
-
-          const districtSelect = document.getElementById("filterDistrict");
-
-          if (districtSelect) {
-            // Kosongkan opsi lama kecuali "Semua Distrik"
-            districtSelect.innerHTML =
-              '<option value="ALL">Semua Distrik</option>';
-
-            distrikUnik.forEach((dist) => {
-              const opt = document.createElement("option");
-              opt.value = dist;
-              opt.textContent = dist; // Teks akan tampil KAPITAL semua agar rapi
-              districtSelect.appendChild(opt);
+            globalData = dataRows.map((row) => {
+              let obj = {};
+              headers.forEach((head, index) => {
+                if (head) obj[head.trim()] = row[index];
+              });
+              return obj;
             });
 
-            // Event listener untuk dropdown
-            districtSelect.addEventListener("change", function () {
-              applyFilters();
-            });
-          }
-          // -------------------------------------
-          // -------------------------------------
+            document.getElementById("loadingIndicator").style.display = "none";
+            document.getElementById("dataTable").style.display = "table";
 
-          generateSidebar(globalData);
-          populateTableDropdowns(globalData);
-          applyFilters(); // Panggil fungsi filter gabungan di awal
-        },
-        error: function (err) {
-          document.getElementById("loadingIndicator").innerHTML =
-            `<i class="fa-solid fa-triangle-exclamation" style="color:red;"></i> Gagal memuat data.`;
-        },
-      });
+            populateTableDropdowns(globalData);
+            applyFilters();
+          },
+          error: function (err) {
+            document.getElementById("loadingIndicator").innerHTML =
+              `<i class="fa-solid fa-triangle-exclamation" style="color:red;"></i> Gagal memuat data.`;
+          },
+        });
+      }
       // ==========================================
       // FUNGSI GABUNGAN FILTER (REGION, DISTRICT, TABEL)
+      // ==========================================
+      // ==========================================
+      // FUNGSI GABUNGAN FILTER (DISTRICT, TABEL, DLL)
       // ==========================================
       function applyFilters() {
         let filteredData = globalData;
 
-        // 1. Filter Region (Dari Sidebar)
-        if (currentActiveMenu !== "Semua Data") {
-          filteredData = filteredData.filter(
-            (item) =>
-              (item["REGION"] || "").toUpperCase() ===
-              currentActiveMenu.toUpperCase(),
-          );
-        }
+        // (Filter Region sudah dihapus di sini agar tidak memblokir data)
 
-        // 2. Filter District (Dari Dropdown Kanan Atas)
+        // 1. Filter District (Dari Dropdown Kanan Atas)
         const districtSelect = document.getElementById("filterDistrict");
         if (districtSelect && districtSelect.value.toUpperCase() !== "ALL") {
           filteredData = filteredData.filter(
@@ -632,20 +621,8 @@
               districtSelect.value.toUpperCase(),
           );
         }
-        // 3. Search SITE ID (Pencarian Teks)
-        const searchSite = document.getElementById("searchSiteId");
-        if (searchSite && searchSite.value.trim() !== "") {
-          const query = searchSite.value.trim().toUpperCase();
-          filteredData = filteredData.filter((item) => {
-            // Mengambil data dari kolom 'SITE ID' ATAU 'SITEID' (tanpa spasi)
-            const siteIdValue = (item["SITE ID"] || item["SITEID"] || "")
-              .toString()
-              .toUpperCase();
-            return siteIdValue.includes(query);
-          });
-        }
 
-        // 4. Filter Status Lapangan
+        // 2. Filter Status Lapangan
         const statusSelect = document.getElementById("filterStatusLap");
         if (statusSelect && statusSelect.value.toUpperCase() !== "ALL") {
           filteredData = filteredData.filter(
@@ -655,7 +632,7 @@
           );
         }
 
-        // 5. Filter Progres Lapangan
+        // 3. Filter Progres Lapangan
         const progresSelect = document.getElementById("filterProgresLap");
         if (progresSelect && progresSelect.value.toUpperCase() !== "ALL") {
           filteredData = filteredData.filter(
@@ -665,7 +642,7 @@
           );
         }
 
-        // 6. Filter Sub Progres Lapangan
+        // 4. Filter Sub Progres Lapangan
         const subProgresSelect = document.getElementById("filterSubProgresLap");
         if (
           subProgresSelect &&
@@ -682,48 +659,47 @@
             return subProg === subProgresSelect.value.toUpperCase();
           });
         }
-        // 2. Search Teks Berdasarkan Kolom Spesifik (Ultra-Aman)
-          const searchInput = document.getElementById('searchSiteId');
-          const searchColumn = document.getElementById('searchColumn');
 
-          // Pastikan elemen ada dan input tidak kosong
-          if (searchInput && searchColumn && searchInput.value.trim() !== "") {
-              const query = searchInput.value.trim().toUpperCase();
-              const selectedCol = searchColumn.value.trim().toUpperCase();
+        // 5. Search Teks Berdasarkan Kolom Spesifik (Ultra-Aman)
+        const searchInput = document.getElementById("searchSiteId");
+        const searchColumn = document.getElementById("searchColumn");
 
-              filteredData = filteredData.filter(item => {
-                  let isMatch = false;
-                  
-                  // Periksa semua nama kolom di baris data ini satu per satu
-                  for (let key in item) {
-                      let cleanKey = key.trim().toUpperCase();
-                      
-                      // Cek apakah nama kolom ini sama dengan yang dipilih pengguna di dropdown
-                      let isTargetColumn = false;
-                      if (selectedCol === "SITE ID") {
-                          isTargetColumn = (cleanKey === "SITE ID" || cleanKey === "SITEID");
-                      } else if (selectedCol === "DETAIL PROGRES") {
-                          isTargetColumn = (cleanKey === "DETAIL PROGRES" || cleanKey === "DETAIL PROGRESS");
-                      } else {
-                          isTargetColumn = (cleanKey === selectedCol);
-                      }
+        if (searchInput && searchColumn && searchInput.value.trim() !== "") {
+          const query = searchInput.value.trim().toUpperCase();
+          const selectedCol = searchColumn.value.trim().toUpperCase();
 
-                      // Jika kolom sasarannya ketemu, periksa teks di dalamnya
-                      if (isTargetColumn) {
-                          let cellValue = item[key];
-                          // Pastikan sel tersebut ada isinya (tidak null/undefined)
-                          if (cellValue !== null && cellValue !== undefined) {
-                              if (cellValue.toString().toUpperCase().includes(query)) {
-                                  isMatch = true;
-                              }
-                          }
-                          break; // Hentikan pengecekan kolom lain karena sudah ketemu
-                      }
+          filteredData = filteredData.filter((item) => {
+            let isMatch = false;
+
+            for (let key in item) {
+              let cleanKey = key.trim().toUpperCase();
+
+              let isTargetColumn = false;
+              if (selectedCol === "SITE ID") {
+                isTargetColumn =
+                  cleanKey === "SITE ID" || cleanKey === "SITEID";
+              } else if (selectedCol === "DETAIL PROGRES") {
+                isTargetColumn =
+                  cleanKey === "DETAIL PROGRES" ||
+                  cleanKey === "DETAIL PROGRESS";
+              } else {
+                isTargetColumn = cleanKey === selectedCol;
+              }
+
+              if (isTargetColumn) {
+                let cellValue = item[key];
+                if (cellValue !== null && cellValue !== undefined) {
+                  if (cellValue.toString().toUpperCase().includes(query)) {
+                    isMatch = true;
                   }
-                  
-                  return isMatch;
-              });
-          }
+                }
+                break; 
+              }
+            }
+
+            return isMatch;
+          });
+        }
 
         // Render ulang dashboard dengan data yang sudah disaring berlapis
         updateDashboard(filteredData, currentActiveMenu);
@@ -779,27 +755,23 @@
         );
 
         // 2. Search Teks Berdasarkan Kolom Spesifik
-          const searchInput = document.getElementById('searchSiteId');
-          const searchColumn = document.getElementById('searchColumn');
+        const searchInput = document.getElementById("searchSiteId");
+        const searchColumn = document.getElementById("searchColumn");
 
-          if (searchInput) {
-              searchInput.addEventListener('input', applyFilters);
-          }
-          if (searchColumn) {
-              searchColumn.addEventListener('change', applyFilters);
-          }
+        if (searchInput) {
+          searchInput.addEventListener("input", applyFilters);
+        }
+        if (searchColumn) {
+          searchColumn.addEventListener("change", applyFilters);
+        }
       }
 
-      // ==========================================
-      // 2. GENERATE SIDEBAR & MENU
-      // ==========================================
       // ==========================================
       // 2. GENERATE SIDEBAR & MENU
       // ==========================================
       function generateSidebar() {
         const menuList = document.getElementById("sidebarMenu");
 
-        // Menampilkan menu NODE-B beserta menu placeholder lainnya
         menuList.innerHTML = `
             <li class="menu-item active" id="menu-nodeb"><i class="fa-solid fa-network-wired"></i> NODE-B</li>
             <li class="menu-item" id="menu-hemsbu"><i class="fa-solid fa-server"></i> HEM SBU</li>
@@ -807,22 +779,38 @@
             <li class="menu-item" id="menu-jpp"><i class="fa-solid fa-building"></i> JPP PT3/PT4</li>
         `;
 
-        // 1. Logika untuk Menu NODE-B (Menampilkan Data Utama)
+        // Klik Menu NODE-B
         document
           .getElementById("menu-nodeb")
           .addEventListener("click", function () {
             setActiveMenu(this);
-            applyFilters(); // Memanggil data dari Google Sheets
+            currentActiveMenu = "NODE-B";
+            loadData(gidNodeB); // Tarik data Node-B
           });
 
-        // 2. Logika untuk Menu Lainnya (Dikosongkan Sementara)
-        const menuKosong = ["menu-hemsbu", "menu-olosbu", "menu-jpp"];
-        menuKosong.forEach((id) => {
-          document.getElementById(id).addEventListener("click", function () {
+        // Klik Menu HEM SBU
+        document
+          .getElementById("menu-hemsbu")
+          .addEventListener("click", function () {
             setActiveMenu(this);
-            // Mengirimkan array kosong [] agar tabel dan grafik dibersihkan
-            updateDashboard([]);
+            currentActiveMenu = "HEM SBU";
+            loadData(gidHemSbu); // Tarik data HEM SBU
           });
+
+       document.getElementById("menu-olosbu").addEventListener("click", function () {
+            setActiveMenu(this);
+            currentActiveMenu = "OLO SBU";
+            loadData(gidOloSbu); 
+        });
+
+        // Klik Menu Kosong Lainnya (Tinggal JPP saja)
+        const menuKosong = ["menu-jpp"];
+        menuKosong.forEach(id => {
+            document.getElementById(id).addEventListener("click", function () {
+                setActiveMenu(this);
+                currentActiveMenu = id;
+                updateDashboard([]); 
+            });
         });
       }
       function setActiveMenu(clickedElement) {
@@ -835,34 +823,34 @@
       // ==========================================
       // 3. UPDATE KESELURUHAN (KPI & TABEL)
       // ==========================================
-      function updateDashboard(dataToRender, title) {
-        document.getElementById("bannerTitle").innerHTML =
-          `<i class="fa-solid fa-satellite-dish"></i> ED SUMBAGUT`;
+      function updateDashboard(dataToRender) {
+        document.getElementById("bannerTitle").innerHTML = `<i class="fa-solid fa-satellite-dish"></i> ED SUMBAGUT`;
 
-        let countOnAir = 0,
-          countOpen = 0,
-          countDrop = 0,
-          countKendala = 0;
+        let countOnAir = 0, countOpen = 0, countDrop = 0, countKendala = 0;
 
         dataToRender.forEach((item) => {
-          const statusLap = (item["Status Lapangan"] || "").toUpperCase();
-          const progLap = (item["PROGRES LAPANGAN"] || "").toUpperCase();
+          let statusLap = "";
+          let progLap = "";
 
-          if (
-            statusLap.includes("GOLIVE") ||
-            progLap.includes("ON AIR") ||
-            statusLap.includes("CLOSED") ||
-            progLap.includes("DONE")
-          ) {
+          // Logika Dinamis: Beda Menu, Beda Kolom Status yang dibaca
+          if (currentActiveMenu === "NODE-B") {
+            statusLap = (item["Status Lapangan"] || "").toUpperCase();
+            progLap = (item["PROGRES LAPANGAN"] || "").toUpperCase();
+          } else if (currentActiveMenu === "HEM SBU") {
+            statusLap = (item["STATUS JT"] || item["Sub Status"] || "").toUpperCase();
+            progLap = (item["Progress Lapangan"] || "").toUpperCase();
+          } else if (currentActiveMenu === "OLO SBU") {
+            // OLO SBU membaca Sub Status
+            statusLap = (item["Sub Status"] || "").toUpperCase();
+            progLap = (item["Progress Lapangan"] || "").toUpperCase();
+          }
+
+          // Menghitung jumlah masing-masing status
+          if (statusLap.includes("GOLIVE") || progLap.includes("ON AIR") || statusLap.includes("CLOSED") || progLap.includes("DONE") || statusLap === "ON") {
             countOnAir++;
           } else if (statusLap.includes("DROP") || progLap.includes("DROP")) {
             countDrop++;
-          } else if (
-            statusLap.includes("KENDALA") ||
-            progLap.includes("REDESIGN") ||
-            statusLap.includes("HOLD") ||
-            progLap.includes("ISSUE")
-          ) {
+          } else if (statusLap.includes("KENDALA") || progLap.includes("REDESIGN") || statusLap.includes("HOLD") || progLap.includes("ISSUE")) {
             countKendala++;
           } else {
             countOpen++;
@@ -876,13 +864,7 @@
         document.getElementById("valKendala").textContent = countKendala;
 
         renderTable(dataToRender);
-        renderCharts(
-          dataToRender,
-          countOnAir,
-          countOpen,
-          countDrop,
-          countKendala,
-        );
+        renderCharts(dataToRender, countOnAir, countOpen, countDrop, countKendala);
       }
 
       function renderTable(data) {
@@ -892,22 +874,42 @@
         tableBody.innerHTML = "";
 
         if (data.length === 0) return;
+        let desiredHeaders = [];
 
-        // 1. Tentukan kolom spesifik yang hanya ingin ditampilkan
-        const desiredHeaders = [
-          "NO",
-          "SITE ID",
-          "STO",
-          "SITE NAME",
-          "MITRA",
-          "Status Lapangan",
-          "PROGRES LAPANGAN",
-          "SUB PROGRES LAPANGAN",
-          "KOMITMEN GO-LIVE",
-          "DETAIL PROGRES", // Disesuaikan dengan ejaan dari data spreadsheetmu
-        ];
-
-        // 2. Render Header (Judul Kolom)
+        // Cek menu apa yang sedang aktif
+        if (currentActiveMenu === "NODE-B") {
+          desiredHeaders = [
+            "NO",
+            "SITE ID",
+            "STO",
+            "SITE NAME",
+            "MITRA",
+            "Status Lapangan",
+            "PROGRES LAPANGAN",
+            "SUB PROGRES LAPANGAN",
+            "KOMITMEN GO-LIVE",
+            "DETAIL PROGRES",
+          ];
+        } else if (currentActiveMenu === "HEM SBU") {
+            desiredHeaders = [
+              "STO", "UNSC/PROJECT", "SEGMEN", "TIPE DESAIN 2", "TIPE DESAIN", 
+              "Subkon", "Progress Lapangan", "NDE WORK ORDER KE TA", "STATUS JT", "Sub Status"
+            ];
+        } else if (currentActiveMenu === "OLO SBU") {
+            // Urutan Kolom OLO SBU: C, H, G, L, K, R, S, P, U, T
+            desiredHeaders = [
+              "NO ORDER",           // C
+              "IHLD",               // H
+              "NAMA PROYEK",        // G
+              "DISTRICT",           // L
+              "STO",                // K
+              "Progress Lapangan",  // R
+              "Sub Status",         // S
+              "Mitra",              // P
+              "Komitmen Golive",    // U
+              "Detail Progres"      // T
+            ];
+        }
         const trHead = document.createElement("tr");
         desiredHeaders.forEach((header) => {
           const th = document.createElement("th");
@@ -916,31 +918,28 @@
         });
         tableHead.appendChild(trHead);
 
-        // 3. Render Isi Tabel
+        // Render Isi Tabel
         data.forEach((row) => {
           const tr = document.createElement("tr");
           desiredHeaders.forEach((header) => {
             const td = document.createElement("td");
-            
-            let cellValue = "-";
 
-            // Tangkap data khusus untuk kolom Komitmen Go-Live (berjaga-jaga jika ejaannya beda di Excel)
+            // Logika aman pembacaan kolom
+            let cellValue = "-";
             if (header === "KOMITMEN GO-LIVE") {
-                // Cek berbagai kemungkinan nama judul di baris pertama kolom AN Excel-mu
-                cellValue = row["KOMITMEN GO-LIVE"] || 
-                            row["KOMITMEN GOLIVE"] || 
-                            row["TGL TGT OA"] || // (Berdasarkan gambar Excel-mu sebelumnya, kolom AN bernama ini)
-                            row["Komitmen Golive"] || 
-                            "-";
+              cellValue =
+                row["KOMITMEN GO-LIVE"] ||
+                row["KOMITMEN GOLIVE"] ||
+                row["TGL TGT OA"] ||
+                "-";
             } else {
-                // Untuk kolom lainnya, gunakan logika standar
-                cellValue = row[header] || 
-                            row[header.toUpperCase()] || 
-                            row[header.replace(" ", "")] || 
-                            row["Detail Progress"] || 
-                            "-";
+              cellValue =
+                row[header] ||
+                row[header.toUpperCase()] ||
+                row[header.replace(" ", "")] ||
+                "-";
             }
-            
+
             td.textContent = cellValue;
             tr.appendChild(td);
           });
@@ -951,218 +950,180 @@
       // ==========================================
       // 4. RENDER CHART
       // ==========================================
+      // ==========================================
+      // 4. RENDER CHART DINAMIS BERDASARKAN MENU
+      // ==========================================
       function renderCharts(data, onAir, open, drop, kendala) {
         if (chartDonut) chartDonut.destroy();
         if (chartBar) chartBar.destroy();
-        if (chartProgres) chartProgres.destroy(); // Hancurkan chart progres lama
+        if (chartProgres) chartProgres.destroy();
+        if (chartSla) chartSla.destroy(); 
 
-        // Warna statis untuk Dark Mode
         const textColor = "#8b949e";
         const gridColor = "#2A3441";
 
-        // 1. Chart Donut
+        // --- 1. Chart Donut (Overview Status Utama) ---
         const ctxDonut = document.getElementById("donutChart").getContext("2d");
         chartDonut = new Chart(ctxDonut, {
           type: "doughnut",
           data: {
             labels: ["ON AIR/CLOSED", "OPEN", "KENDALA", "DROP"],
-            datasets: [
-              {
-                data: [onAir, open, kendala, drop],
-                backgroundColor: ["#10B981", "#3B82F6", "#F59E0B", "#EF4444"],
-                borderWidth: 0,
-                cutout: "65%",
-              },
-            ],
+            datasets: [{
+              data: [onAir, open, kendala, drop],
+              backgroundColor: ["#10B981", "#3B82F6", "#F59E0B", "#EF4444"],
+              borderWidth: 0,
+              cutout: "70%", // Dibuat lebih tipis agar elegan
+            }],
           },
           options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: "bottom",
-                labels: { usePointStyle: true, color: textColor },
-              },
-            },
-          },
-        });
-
-        // 2. Chart Bar (Distribusi District)
-        const districtData = {};
-        data.forEach((item) => {
-          const district = (item["DISTRICT"] || "Uncategorized")
-            .trim()
-            .toUpperCase();
-          const statusLap = (item["Status Lapangan"] || "").toUpperCase();
-          const progLap = (item["PROGRES LAPANGAN"] || "").toUpperCase();
-
-          if (district === "") return;
-          if (!districtData[district])
-            districtData[district] = { onair: 0, open: 0, kendala: 0, drop: 0 };
-
-          if (
-            statusLap.includes("GOLIVE") ||
-            progLap.includes("ON AIR") ||
-            statusLap.includes("CLOSED")
-          ) {
-            districtData[district].onair++;
-          } else if (statusLap.includes("DROP") || progLap.includes("DROP")) {
-            districtData[district].drop++;
-          } else if (
-            statusLap.includes("KENDALA") ||
-            progLap.includes("REDESIGN") ||
-            statusLap.includes("HOLD") ||
-            progLap.includes("ISSUE")
-          ) {
-            districtData[district].kendala++;
-          } else {
-            districtData[district].open++;
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom", labels: { usePointStyle: true, color: textColor } } }
           }
         });
 
-        const labelsDistrict = Object.keys(districtData);
+        // --- 2. Chart Bar (Dinamis: NODE-B = DISTRIK | HEM SBU = STO) ---
+        const groupData2 = {};
+        let titleChart2 = document.getElementById("titleChart2"); // Membaca ID judul di HTML
 
+        data.forEach((item) => {
+          let kategoriGroup = "";
+          let statusLap = "";
+          let progLap = "";
+
+          // Cek sedang di menu apa untuk menentukan data dan judul chart bar
+          if (currentActiveMenu === "NODE-B") {
+             if(titleChart2) titleChart2.innerHTML = `<i class="fa-solid fa-chart-column"></i> DISTRIBUSI STATUS PER DISTRIK`;
+             kategoriGroup = (item["DISTRICT"] || "Uncategorized").trim().toUpperCase();
+             statusLap = (item["Status Lapangan"] || "").toUpperCase();
+             progLap = (item["PROGRES LAPANGAN"] || "").toUpperCase();
+          } else if (currentActiveMenu === "HEM SBU") {
+             if(titleChart2) titleChart2.innerHTML = `<i class="fa-solid fa-building"></i> DISTRIBUSI STATUS PER STO`;
+             kategoriGroup = (item["STO"] || "Uncategorized").trim().toUpperCase();
+             statusLap = (item["STATUS JT"] || item["Sub Status"] || "").toUpperCase();
+             progLap = (item["Progress Lapangan"] || "").toUpperCase();
+          } else if (currentActiveMenu === "OLO SBU") {
+             if(titleChart2) titleChart2.innerHTML = `<i class="fa-solid fa-chart-column"></i> DISTRIBUSI STATUS PER DISTRIK`;
+             kategoriGroup = (item["DISTRICT"] || "Uncategorized").trim().toUpperCase();
+             statusLap = (item["Sub Status"] || "").toUpperCase();
+             progLap = (item["Progress Lapangan"] || "").toUpperCase();
+          }
+
+          if (kategoriGroup === "") return;
+          if (!groupData2[kategoriGroup]) groupData2[kategoriGroup] = { onair: 0, open: 0, kendala: 0, drop: 0 };
+
+          // Kelompokkan Statusnya
+          if (statusLap.includes("GOLIVE") || progLap.includes("ON AIR") || statusLap.includes("CLOSED") || progLap.includes("DONE") || statusLap === "ON") {
+            groupData2[kategoriGroup].onair++;
+          } else if (statusLap.includes("DROP") || progLap.includes("DROP")) {
+            groupData2[kategoriGroup].drop++;
+          } else if (statusLap.includes("KENDALA") || progLap.includes("REDESIGN") || progLap.includes("HOLD") || progLap.includes("ISSUE")) {
+            groupData2[kategoriGroup].kendala++;
+          } else {
+            groupData2[kategoriGroup].open++;
+          }
+        });
+
+        const labelsChart2 = Object.keys(groupData2);
         const ctxBar = document.getElementById("mainBarChart").getContext("2d");
         chartBar = new Chart(ctxBar, {
           type: "bar",
           data: {
-            labels: labelsDistrict,
+            labels: labelsChart2,
             datasets: [
-              {
-                label: "CLOSED",
-                data: labelsDistrict.map((d) => districtData[d].onair),
-                backgroundColor: "#10B981",
-              },
-              {
-                label: "OPEN",
-                data: labelsDistrict.map((d) => districtData[d].open),
-                backgroundColor: "#3B82F6",
-              },
-              {
-                label: "KENDALA",
-                data: labelsDistrict.map((d) => districtData[d].kendala),
-                backgroundColor: "#F59E0B",
-              },
-              {
-                label: "DROP",
-                data: labelsDistrict.map((d) => districtData[d].drop),
-                backgroundColor: "#EF4444",
-              },
+              { label: "CLOSED", data: labelsChart2.map((d) => groupData2[d].onair), backgroundColor: "#10B981", borderRadius: 4 },
+              { label: "OPEN", data: labelsChart2.map((d) => groupData2[d].open), backgroundColor: "#3B82F6", borderRadius: 4 },
+              { label: "KENDALA", data: labelsChart2.map((d) => groupData2[d].kendala), backgroundColor: "#F59E0B", borderRadius: 4 },
+              { label: "DROP", data: labelsChart2.map((d) => groupData2[d].drop), backgroundColor: "#EF4444", borderRadius: 4 },
             ],
           },
           options: {
-            indexAxis: "y",
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: "top",
-                labels: { usePointStyle: true, color: textColor },
-              },
-            },
+            indexAxis: "y", // Posisi horizontal agar nama STO/Distrik terbaca rapi
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: "top", labels: { usePointStyle: true, color: textColor } } },
             scales: {
-              x: {
-                stacked: true,
-                grid: { color: gridColor },
-                ticks: { color: textColor },
-              },
-              y: {
-                stacked: true,
-                grid: { display: false },
-                ticks: { color: textColor },
-              },
-            },
-          },
-        });
-
-        // 3. Chart Progres Lapangan (Baru)
-        const progresData = {};
-        data.forEach((item) => {
-          const prog = (
-            item["PROGRES LAPANGAN"] || "KOSONG / TIDAK ADA DATA"
-          ).trim();
-          if (prog !== "") {
-            progresData[prog] = (progresData[prog] || 0) + 1;
+              x: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor } },
+              y: { stacked: true, grid: { display: false }, ticks: { color: textColor } },
+            }
           }
         });
 
+        // --- 3. Chart Progres Lapangan ---
+        const progresData = {};
+        data.forEach((item) => {
+          // Mengakomodasi nama kolom "PROGRES LAPANGAN" (Node-B) dan "Progress Lapangan" (HEM SBU)
+          const prog = (item["PROGRES LAPANGAN"] || item["Progress Lapangan"] || "TIDAK ADA DATA").trim();
+          if (prog !== "") progresData[prog] = (progresData[prog] || 0) + 1;
+        });
+
         const ctxProgres = document.getElementById("progresChart");
-        // Pastikan elemen canvasnya ada sebelum membuat chart
         if (ctxProgres) {
           chartProgres = new Chart(ctxProgres.getContext("2d"), {
             type: "bar",
             data: {
               labels: Object.keys(progresData),
-              datasets: [
-                {
-                  label: "Jumlah Site",
-                  data: Object.values(progresData),
-                  backgroundColor: "#8B5CF6", // Warna Ungu
-                  borderRadius: 4,
-                },
-              ],
+              datasets: [{ label: "Jumlah Site", data: Object.values(progresData), backgroundColor: "#8B5CF6", borderRadius: 6 }],
             },
             options: {
-              indexAxis: "y",
-              responsive: true,
-              maintainAspectRatio: false,
+              indexAxis: "y", responsive: true, maintainAspectRatio: false,
               plugins: { legend: { display: false } },
               scales: {
-                x: {
-                  beginAtZero: true,
-                  grid: { color: gridColor },
-                  ticks: { color: textColor },
-                },
+                x: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
                 y: { grid: { display: false }, ticks: { color: textColor } },
-              },
-            },
+              }
+            }
           });
         }
-        // --- 4. Chart Kategori SLA (Khusus Status ON) ---
-        if (chartSla) chartSla.destroy();
 
-        const slaData = {};
+        // --- 4. Chart Dinamis (NODE-B: Kategori SLA | HEM SBU: Distribusi Segmen) ---
+        const dynamicData4 = {};
+        let titleChart4 = document.getElementById("titleChart4"); // Membaca ID judul di HTML
+
         data.forEach((item) => {
-            const statusLap = (item["Status Lapangan"] || "").toUpperCase();
-            const progLap = (item["PROGRES LAPANGAN"] || "").toUpperCase();
-            
-            // Filter HANYA yang mengandung kata "ON" (misal: "ON AIR")
-            if (statusLap.includes("ON") || progLap.includes("ON")) {
-                // Ambil data dari kolom KAT SLA
-                const katSla = (item["KAT SLA"] || item["KATEGORI SLA"] || "TIDAK ADA DATA").trim();
-                if (katSla !== "") {
-                    slaData[katSla] = (slaData[katSla] || 0) + 1;
-                }
-            }
+          let targetValue = "";
+          
+          if (currentActiveMenu === "NODE-B") {
+             if(titleChart4) titleChart4.innerHTML = `<i class="fa-solid fa-clock"></i> KATEGORI SLA (STATUS ON)`;
+             const statusLap = (item["Status Lapangan"] || "").toUpperCase();
+             const progLap = (item["PROGRES LAPANGAN"] || "").toUpperCase();
+             if (statusLap.includes("ON") || progLap.includes("ON")) {
+                 targetValue = (item["KAT SLA"] || item["KATEGORI SLA"] || "TIDAK ADA DATA").trim();
+             }
+          } else if (currentActiveMenu === "HEM SBU") {
+             if(titleChart4) titleChart4.innerHTML = `<i class="fa-solid fa-layer-group"></i> DISTRIBUSI SEGMEN`;
+             targetValue = (item["SEGMEN"] || "TIDAK ADA DATA").trim();
+          } else if (currentActiveMenu === "OLO SBU") {
+             if(titleChart4) titleChart4.innerHTML = `<i class="fa-solid fa-handshake"></i> DISTRIBUSI MITRA`;
+             targetValue = (item["Mitra"] || item["MITRA"] || "TIDAK ADA DATA").trim();
+          }
+
+          if (targetValue !== "") {
+             dynamicData4[targetValue] = (dynamicData4[targetValue] || 0) + 1;
+          }
         });
 
         const ctxSla = document.getElementById("slaChart");
         if (ctxSla) {
-            chartSla = new Chart(ctxSla.getContext("2d"), {
-                type: "doughnut",
-                data: {
-                    labels: Object.keys(slaData),
-                    datasets: [{
-                        data: Object.values(slaData),
-                        // Warna-warni cerah yang masuk dengan tema Dark Mode
-                        backgroundColor: ["#10B981", "#3B82F6", "#8B5CF6", "#F59E0B", "#EF4444", "#14B8A6", "#EC4899"],
-                        borderWidth: 0,
-                        cutout: "60%" 
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: "right", // Label di samping agar muat 
-                            labels: { usePointStyle: true, color: textColor }
-                        }
-                    }
-                }
-            });
+          chartSla = new Chart(ctxSla.getContext("2d"), {
+            type: "doughnut",
+            data: {
+              labels: Object.keys(dynamicData4),
+              datasets: [{
+                data: Object.values(dynamicData4),
+                // Tambahan variasi warna
+                backgroundColor: ["#10B981", "#3B82F6", "#8B5CF6", "#F59E0B", "#EF4444", "#14B8A6", "#EC4899", "#8E44AD"],
+                borderWidth: 0, cutout: "60%",
+              }],
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { position: "right", labels: { usePointStyle: true, color: textColor } } }
+            }
+          });
         }
       }
+      // Inisialisasi awal saat web dibuka
+      generateSidebar();
+      loadData(gidNodeB);
     </script>
   </body>
 </html>
