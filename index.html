@@ -838,16 +838,6 @@
             currentActiveMenu = "JPP PT3/PT4";
             loadData(gidJpp); 
         });
-
-        // Klik Menu Kosong Lainnya (Tinggal JPP saja)
-        const menuKosong = ["menu-jpp"];
-        menuKosong.forEach(id => {
-            document.getElementById(id).addEventListener("click", function () {
-                setActiveMenu(this);
-                currentActiveMenu = id;
-                updateDashboard([]); 
-            });
-        });
       }
       function setActiveMenu(clickedElement) {
         document
