@@ -766,6 +766,12 @@
               });
               return obj;
             });
+            if (gid === gidJpp || gid === "0") {
+              globalData = globalData.filter((item) => {
+                let regionFmc = (item["REGION FMC"] || item["Region Fmc"] || "").toString().trim().toUpperCase();
+                return regionFmc === "SUMBAGUT";
+              });
+            }
 
             document.getElementById("loadingIndicator").style.display = "none";
             document.getElementById("dataTable").style.display = "table";
