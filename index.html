@@ -786,62 +786,45 @@
         });
       }
       // ==========================================
-      // FUNGSI GABUNGAN FILTER (REGION, DISTRICT, TABEL)
-      // ==========================================
-      // ==========================================
-      // FUNGSI GABUNGAN FILTER (DISTRICT, TABEL, DLL)
+      // FUNGSI MENERAPKAN FILTER SAAT DROPDOWN DIKLIK
       // ==========================================
       function applyFilters() {
-        let filteredData = globalData;
+        let filteredData = [...globalData];
 
-        // (Filter Region sudah dihapus di sini agar tidak memblokir data)
+        const val1 = document.getElementById("filterStatusLap") ? document.getElementById("filterStatusLap").value : "";
+        const val2 = document.getElementById("filterProgresLap") ? document.getElementById("filterProgresLap").value : "";
+        const val3 = document.getElementById("filterSubProgresLap") ? document.getElementById("filterSubProgresLap").value : "";
 
-        // 1. Filter District (Dari Dropdown Kanan Atas)
-        const districtSelect = document.getElementById("filterDistrict");
-        if (districtSelect && districtSelect.value.toUpperCase() !== "ALL") {
-          filteredData = filteredData.filter(
-            (item) =>
-              (item["DISTRICT"] || "").trim().toUpperCase() ===
-              districtSelect.value.toUpperCase(),
-          );
+        // Fungsi pencari kolom kebal error
+        function getSafeValue(item, colTarget) {
+            const targetUpper = colTarget.replace(/\s+/g, " ").trim().toUpperCase();
+            const realKey = Object.keys(item).find(k => 
+                k.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase() === targetUpper
+            );
+            return realKey ? item[realKey] : item[colTarget];
         }
 
-        // 2. Filter Status Lapangan
-        const statusSelect = document.getElementById("filterStatusLap");
-        if (statusSelect && statusSelect.value.toUpperCase() !== "ALL") {
-          filteredData = filteredData.filter(
-            (item) =>
-              (item["Status Lapangan"] || "").trim().toUpperCase() ===
-              statusSelect.value.toUpperCase(),
-          );
+        // Tentukan nama kolom mana yang harus di-filter berdasarkan menu aktif
+        let col1 = "", col2 = "", col3 = "";
+        if (currentActiveMenu === "NODE-B") {
+            col1 = "Status Lapangan"; col2 = "PROGRES LAPANGAN"; col3 = "SUB PROGRES LAPANGAN";
+        } else if (currentActiveMenu === "HEM SBU") {
+            col1 = "STATUS JT"; col2 = "Progress Lapangan"; col3 = "Sub Status";
+        } else if (currentActiveMenu === "OLO SBU") {
+            col1 = "Sub Status"; col2 = "Progress Lapangan"; col3 = "Mitra";
+        } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
+            col1 = "Status"; col2 = "SUB STATUS KONS"; col3 = "Mitra";
         }
 
-        // 3. Filter Progres Lapangan
-        const progresSelect = document.getElementById("filterProgresLap");
-        if (progresSelect && progresSelect.value.toUpperCase() !== "ALL") {
-          filteredData = filteredData.filter(
-            (item) =>
-              (item["PROGRES LAPANGAN"] || "").trim().toUpperCase() ===
-              progresSelect.value.toUpperCase(),
-          );
+        // Terapkan Filter Dropdown
+        if (val1) {
+            filteredData = filteredData.filter(item => getSafeValue(item, col1) == val1);
         }
-
-        // 4. Filter Sub Progres Lapangan
-        const subProgresSelect = document.getElementById("filterSubProgresLap");
-        if (
-          subProgresSelect &&
-          subProgresSelect.value.toUpperCase() !== "ALL"
-        ) {
-          filteredData = filteredData.filter((item) => {
-            const subProg = (
-              item["SUB PROGRES LAPANGAN"] ||
-              item["Sub Progres Lapangan"] ||
-              ""
-            )
-              .trim()
-              .toUpperCase();
-            return subProg === subProgresSelect.value.toUpperCase();
-          });
+        if (val2) {
+            filteredData = filteredData.filter(item => getSafeValue(item, col2) == val2);
+        }
+        if (val3) {
+            filteredData = filteredData.filter(item => getSafeValue(item, col3) == val3);
         }
 
         // 5. Search Teks Berdasarkan Kolom Spesifik (Ultra-Aman)
@@ -854,37 +837,20 @@
 
           filteredData = filteredData.filter((item) => {
             let isMatch = false;
-
             for (let key in item) {
-              // Bersihkan nama kolom Excel dari spasi dan enter
-              let cleanKey = key
-                .replace(/[\n\r]+/g, " ")
-                .replace(/\s+/g, " ")
-                .trim()
-                .toUpperCase();
+              let cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
               let isTargetColumn = false;
 
-              // Aturan khusus pengenalan kolom
               if (selectedCol === "SITE ID") {
-                isTargetColumn =
-                  cleanKey === "SITE ID" || cleanKey === "SITEID";
+                isTargetColumn = (cleanKey === "SITE ID" || cleanKey === "SITEID");
               } else if (selectedCol === "NO ORDER") {
-                isTargetColumn =
-                  cleanKey === "NO ORDER" ||
-                  cleanKey === "NO. ORDER" ||
-                  cleanKey === "NOMOR ORDER" ||
-                  cleanKey.includes("NO ORDER");
+                isTargetColumn = (cleanKey === "NO ORDER" || cleanKey === "NO. ORDER" || cleanKey === "NOMOR ORDER" || cleanKey.includes("NO ORDER"));
               } else if (selectedCol === "IHLD" || selectedCol === "ID-IHLD") {
-                // Menyatukan pencarian IHLD dan ID-IHLD agar aman
-                isTargetColumn =
-                  cleanKey === "IHLD" ||
-                  cleanKey === "ID-IHLD" ||
-                  cleanKey.includes("IHLD");
+                isTargetColumn = (cleanKey === "IHLD" || cleanKey === "ID-IHLD" || cleanKey.includes("IHLD"));
               } else {
-                isTargetColumn = cleanKey === selectedCol;
+                isTargetColumn = (cleanKey === selectedCol);
               }
 
-              // Jika nama kolom cocok, cek isi datanya
               if (isTargetColumn) {
                 let cellValue = item[key];
                 if (cellValue !== null && cellValue !== undefined) {
@@ -892,90 +858,80 @@
                     isMatch = true;
                   }
                 }
-                break; // Stop cari di kolom lain kalau sudah ketemu
+                break;
               }
             }
-
             return isMatch;
           });
         }
 
-        // Render ulang dashboard dengan data yang sudah disaring berlapis
-        updateDashboard(filteredData, currentActiveMenu);
+        updateDashboard(filteredData);
       }
 
-      // ==========================================
+    // ==========================================
       // FUNGSI UNTUK MENGISI DROPDOWN TABEL OTOMATIS
       // ==========================================
       function populateTableDropdowns(data) {
         function fillDropdown(columnKey, elementId, defaultText) {
-          const rawValues = data
-            .map((item) =>
-              (
-                item[columnKey] ||
-                item[columnKey.toUpperCase()] ||
-                item[columnKey.toLowerCase()] ||
-                ""
-              )
-                .trim()
-                .toUpperCase(),
-            )
-            .filter(Boolean);
-          const uniqueValues = [...new Set(rawValues)].sort();
-          const selectEl = document.getElementById(elementId);
+          const select = document.getElementById(elementId);
+          if (!select) return;
+          
+          select.innerHTML = `<option value="">${defaultText}</option>`;
+          if (data.length === 0) return;
 
-          if (selectEl) {
-            selectEl.innerHTML = `<option value="ALL">${defaultText}</option>`;
-            uniqueValues.forEach((val) => {
-              const opt = document.createElement("option");
-              opt.value = val;
-              opt.textContent = val;
-              selectEl.appendChild(opt);
-            });
-            // Tambahkan event listener agar saat dipilih langsung memfilter
-            selectEl.addEventListener("change", applyFilters);
-          }
+          // Cari nama kolom asli yang cocok (kebal spasi dan huruf besar/kecil)
+          const targetUpper = columnKey.replace(/\s+/g, " ").trim().toUpperCase();
+          const realKey = Object.keys(data[0]).find(k => 
+              k.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase() === targetUpper
+          ) || columnKey;
+
+          // Ambil data unik dari kolom tersebut
+          const uniqueValues = [...new Set(data.map((item) => item[realKey]))].filter(
+            (val) => val !== undefined && val !== null && val.toString().trim() !== ""
+          );
+
+          // Masukkan ke dropdown pilihan HTML
+          uniqueValues.sort().forEach((val) => {
+            const option = document.createElement("option");
+            option.value = val;
+            option.textContent = val;
+            select.appendChild(option);
+          });
         }
 
-        fillDropdown(
-          "Status Lapangan",
-          "filterStatusLap",
-          "Semua Status Lapangan",
-        );
-        fillDropdown(
-          "PROGRES LAPANGAN",
-          "filterProgresLap",
-          "Semua Progres Lapangan",
-        );
-        fillDropdown(
-          "SUB PROGRES LAPANGAN",
-          "filterSubProgresLap",
-          "Semua Sub Progres Lapangan",
-        );
+        // 1. ISI DROPDOWN FILTER SESUAI MENU AKTIF
+        if (currentActiveMenu === "NODE-B") {
+          fillDropdown("Status Lapangan", "filterStatusLap", "Semua Status Lapangan");
+          fillDropdown("PROGRES LAPANGAN", "filterProgresLap", "Semua Progres Lapangan");
+          fillDropdown("SUB PROGRES LAPANGAN", "filterSubProgresLap", "Semua Sub Progres");
+        } else if (currentActiveMenu === "HEM SBU") {
+          // Khusus HEM: Judul dan target kolom berubah otomatis!
+          fillDropdown("STATUS JT", "filterStatusLap", "Semua Status JT");
+          fillDropdown("Progress Lapangan", "filterProgresLap", "Semua Progress Lapangan");
+          fillDropdown("Sub Status", "filterSubProgresLap", "Semua Sub Status");
+        } else if (currentActiveMenu === "OLO SBU") {
+          fillDropdown("Sub Status", "filterStatusLap", "Semua Sub Status");
+          fillDropdown("Progress Lapangan", "filterProgresLap", "Semua Progress Lapangan");
+          fillDropdown("Mitra", "filterSubProgresLap", "Semua Mitra"); 
+        } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
+          fillDropdown("Status", "filterStatusLap", "Semua Status");
+          fillDropdown("SUB STATUS KONS", "filterProgresLap", "Semua Sub Status Kons");
+          fillDropdown("Mitra", "filterSubProgresLap", "Semua Mitra");
+        }
 
-        // ---> KODE BARU: UPDATE DROPDOWN PENCARIAN DINAMIS <---
+        // 2. KODE PENCARIAN DINAMIS
         const searchColumn = document.getElementById("searchColumn");
         if (searchColumn) {
-          searchColumn.innerHTML = ""; // Bersihkan opsi lama bawaan HTML
+          searchColumn.innerHTML = ""; 
           let searchOptions = [];
-
-          // Tentukan pilihan kolom pencarian sesuai menu
           if (currentActiveMenu === "NODE-B") {
             searchOptions = ["SITE ID", "SITE NAME"];
-          } else if (
-            currentActiveMenu === "HEM SBU" ||
-            currentActiveMenu === "OLO SBU"
-          ) {
+          } else if (currentActiveMenu === "HEM SBU" || currentActiveMenu === "OLO SBU") {
             searchOptions = ["NO ORDER", "IHLD", "NAMA PROYEK"];
-          } else if (
-            currentActiveMenu === "JPP PT3/PT4" ||
-            currentActiveMenu.includes("JPP")
-          ) {
+          } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
             searchOptions = ["ID-IHLD", "NAMA LOP"];
           }
-
-          // Masukkan pilihan tersebut ke dalam dropdown HTML
-          searchOptions.forEach((opt) => {
+          searchOptions.forEach(opt => {
             const optionEl = document.createElement("option");
             optionEl.value = opt;
             optionEl.textContent = opt;
