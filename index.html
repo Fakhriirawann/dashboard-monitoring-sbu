@@ -1102,20 +1102,20 @@
           // Susunan baru HEM SBU: AP - E - F - C - R - T - U - X - W
           desiredHeaders = [
             "NO ORDER",
-            "IHLD", // E
-            "NAMA PROYEK", // F
-            "DISTRICT", // C (Ganti jadi "STO" jika ternyata maksudmu STO)
-            "Mitra", // R
-            "Progress Lapangan", // T
-            "Sub Status", // U
-            "TITIP SBU | SERVICE",         // Kolom BI
-            "TITIP SBU | BW",              // Kolom BJ
-            "TITIP SBU | REVENEU",         // Kolom BK (Sesuai ejaan di excelmu)
-            "TITIP SBU | PRIORITY BY TIF", // Kolom BL
-            "TITIP SBU | DURASI ORDER",    // Kolom BM
-            "TITIP SBU | DURASI JT",
-            "Komitmen Golive", // X
-            "Detail Progres", // W
+            "IHLD",
+            "NAMA PROYEK",
+            "DISTRICT",
+            "Mitra",
+            "Progress Lapangan",
+            "Sub Status",
+            "SERVICE",         // Langsung ketik nama aslinya
+            "BANDWIDTH",       // Dulu BW, sekarang di gambar BANDWIDTH
+            "REVENEU",         // Ejaan harus sama persis dengan excel (REVENEU)
+            "PRIORITY BY TIF",
+            "DURASI ORDER",
+            "DURASI JT",
+            "Komitmen Golive",
+            "Detail Progres"
           ];
         } else if (currentActiveMenu === "OLO SBU") {
           desiredHeaders = [
@@ -1217,8 +1217,6 @@
               : '<i class="fa-solid fa-sort-down" style="margin-left: 8px; color: #3B82F6;"></i>';
           }
           
-          let displayText = header.replace("TITIP SBU |", "").trim();
-
           th.innerHTML = `${header} ${iconHtml}`;
 
           // Event Listener Saat Judul Diklik
