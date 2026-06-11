@@ -1108,6 +1108,12 @@
             "Mitra", // R
             "Progress Lapangan", // T
             "Sub Status", // U
+            "TITIP SBU | SERVICE",         // Kolom BI
+            "TITIP SBU | BW",              // Kolom BJ
+            "TITIP SBU | REVENEU",         // Kolom BK (Sesuai ejaan di excelmu)
+            "TITIP SBU | PRIORITY BY TIF", // Kolom BL
+            "TITIP SBU | DURASI ORDER",    // Kolom BM
+            "TITIP SBU | DURASI JT",
             "Komitmen Golive", // X
             "Detail Progres", // W
           ];
@@ -1210,6 +1216,9 @@
               ? '<i class="fa-solid fa-sort-up" style="margin-left: 8px; color: #3B82F6;"></i>'
               : '<i class="fa-solid fa-sort-down" style="margin-left: 8px; color: #3B82F6;"></i>';
           }
+          
+          let displayText = header.replace("TITIP SBU |", "").trim();
+
           th.innerHTML = `${header} ${iconHtml}`;
 
           // Event Listener Saat Judul Diklik
