@@ -1741,6 +1741,28 @@
           });
         });
       });
+      // ==========================================
+      // MENGAKTIFKAN SAKLAR OTOMATIS UNTUK SEMUA FILTER
+      // ==========================================
+      document.addEventListener("DOMContentLoaded", () => {
+        // Pasang saklar pada ketiga dropdown filter
+        const f1 = document.getElementById("filterStatusLap");
+        const f2 = document.getElementById("filterProgresLap");
+        const f3 = document.getElementById("filterSubProgresLap");
+        
+        // Ketika pilihan dropdown berubah (change), langsung jalankan applyFilters
+        if (f1) f1.addEventListener("change", applyFilters);
+        if (f2) f2.addEventListener("change", applyFilters);
+        if (f3) f3.addEventListener("change", applyFilters);
+
+        // Pastikan saklar kotak pencarian teks juga aman
+        const searchInput = document.getElementById("searchSiteId");
+        const searchCol = document.getElementById("searchColumn");
+        
+        // Ketika teks diketik (input) atau kolom pencarian diubah, jalankan applyFilters
+        if (searchInput) searchInput.addEventListener("input", applyFilters);
+        if (searchCol) searchCol.addEventListener("change", applyFilters);
+      });
     </script>
   </body>
 </html>
