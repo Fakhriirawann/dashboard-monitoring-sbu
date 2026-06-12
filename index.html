@@ -662,8 +662,8 @@
       Chart.defaults.borderColor = "#2A3441";
 
       const sheetId = "1KcNQemdjeEdwbUgD1wLKs9X3RDnYzB-h10bSX5ryurk";
-      const gidNodeB = "704502274"; // GID untuk NODE-B
-      const gidHemSbu = "363406545"; // GID untuk HEM SBU
+      const gidNodeB = "704502274";
+      const gidHemSbu = "363406545";
       const gidOloSbu = "503094043";
       const gidJpp = "0";
 
@@ -791,43 +791,45 @@
       function applyFilters() {
         let filteredData = [...globalData];
 
-        const val1 = document.getElementById("filterStatusLap") ? document.getElementById("filterStatusLap").value : "";
-        const val2 = document.getElementById("filterProgresLap") ? document.getElementById("filterProgresLap").value : "";
-        const val3 = document.getElementById("filterSubProgresLap") ? document.getElementById("filterSubProgresLap").value : "";
+        // Ambil nilai filter yang dipilih user
+        const val1 = document.getElementById("filterStatusLap") ? document.getElementById("filterStatusLap").value.trim() : "";
+        const val2 = document.getElementById("filterProgresLap") ? document.getElementById("filterProgresLap").value.trim() : "";
+        const val3 = document.getElementById("filterSubProgresLap") ? document.getElementById("filterSubProgresLap").value.trim() : "";
 
-        // Fungsi pencari kolom kebal error
+        // PERBAIKAN: Fungsi penarik nilai yang BENAR-BENAR kebal huruf besar/kecil
         function getSafeValue(item, colTarget) {
-            const targetUpper = colTarget.replace(/\s+/g, " ").trim().toUpperCase();
+            if (!colTarget) return "";
+            const targetUpper = colTarget.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+            
+            // Cari nama kolom asli di dalam data yang cocok
             const realKey = Object.keys(item).find(k => 
                 k.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase() === targetUpper
             );
-            return realKey ? item[realKey] : item[colTarget];
+            
+            let val = realKey ? item[realKey] : item[colTarget];
+            return val !== null && val !== undefined ? val.toString().trim() : "";
         }
 
-        // Tentukan nama kolom mana yang harus di-filter berdasarkan menu aktif
+        // Tentukan kolom filter berdasarkan normalisasi menu aktif
+        const activeMenu = (currentActiveMenu || "").toUpperCase().trim();
         let col1 = "", col2 = "", col3 = "";
-        if (currentActiveMenu === "NODE-B") {
+        
+        if (activeMenu.includes("NODE")) {
             col1 = "Status Lapangan"; col2 = "PROGRES LAPANGAN"; col3 = "SUB PROGRES LAPANGAN";
-        } else if (currentActiveMenu === "HEM SBU") {
+        } else if (activeMenu.includes("HEM")) {
             col1 = "STATUS JT"; col2 = "Progress Lapangan"; col3 = "Sub Status";
-        } else if (currentActiveMenu === "OLO SBU") {
+        } else if (activeMenu.includes("OLO")) {
             col1 = "Sub Status"; col2 = "Progress Lapangan"; col3 = "Mitra";
-        } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
+        } else if (activeMenu.includes("JPP")) {
             col1 = "Status"; col2 = "SUB STATUS KONS"; col3 = "Mitra";
         }
 
-        // Terapkan Filter Dropdown
-        if (val1) {
-            filteredData = filteredData.filter(item => getSafeValue(item, col1) == val1);
-        }
-        if (val2) {
-            filteredData = filteredData.filter(item => getSafeValue(item, col2) == val2);
-        }
-        if (val3) {
-            filteredData = filteredData.filter(item => getSafeValue(item, col3) == val3);
-        }
+        // Eksekusi filter dropdown
+        if (val1) filteredData = filteredData.filter(item => getSafeValue(item, col1) === val1);
+        if (val2) filteredData = filteredData.filter(item => getSafeValue(item, col2) === val2);
+        if (val3) filteredData = filteredData.filter(item => getSafeValue(item, col3) === val3);
 
-        // 5. Search Teks Berdasarkan Kolom Spesifik (Ultra-Aman)
+        // Filter Teks Pencarian (Search Box)
         const searchInput = document.getElementById("searchSiteId");
         const searchColumn = document.getElementById("searchColumn");
 
@@ -865,32 +867,39 @@
           });
         }
 
+        // Tampilkan hasil akhir filter ke dashboard
         updateDashboard(filteredData);
       }
 
     // ==========================================
-      // FUNGSI UNTUK MENGISI DROPDOWN TABEL OTOMATIS
+      // 1. FUNGSI MENGISI DROPDOWN (100% AMAN & ANTI-ERROR)
       // ==========================================
       function populateTableDropdowns(data) {
         function fillDropdown(columnKey, elementId, defaultText) {
           const select = document.getElementById(elementId);
-          if (!select) return;
+          if (!select) return; // Jika elemen HTML tidak ada, lewati
           
           select.innerHTML = `<option value="">${defaultText}</option>`;
-          if (data.length === 0) return;
+          if (!data || data.length === 0) return; // Jika data kosong, lewati
 
-          // Cari nama kolom asli yang cocok (kebal spasi dan huruf besar/kecil)
-          const targetUpper = columnKey.replace(/\s+/g, " ").trim().toUpperCase();
-          const realKey = Object.keys(data[0]).find(k => 
-              k.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase() === targetUpper
-          ) || columnKey;
+          const targetUpper = columnKey.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+          
+          // Cari nama kunci (key) asli di dalam data
+          let realKey = columnKey; 
+          for (let key in data[0]) {
+             if (key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase() === targetUpper) {
+                 realKey = key;
+                 break;
+             }
+          }
 
-          // Ambil data unik dari kolom tersebut
-          const uniqueValues = [...new Set(data.map((item) => item[realKey]))].filter(
-            (val) => val !== undefined && val !== null && val.toString().trim() !== ""
-          );
+          // Kumpulkan data unik
+          const uniqueValues = [...new Set(data.map((item) => {
+              let val = item[realKey];
+              return val !== null && val !== undefined ? val.toString().trim() : "";
+          }))].filter(val => val !== "");
 
-          // Masukkan ke dropdown pilihan HTML
+          // Masukkan ke dalam pilihan
           uniqueValues.sort().forEach((val) => {
             const option = document.createElement("option");
             option.value = val;
@@ -899,36 +908,38 @@
           });
         }
 
-        // 1. ISI DROPDOWN FILTER SESUAI MENU AKTIF
-        if (currentActiveMenu === "NODE-B") {
+        // Tentukan menu aktif saat ini dengan aman
+        const activeMenu = (currentActiveMenu || "").toUpperCase().trim();
+
+        // Isi dropdown sesuai menu
+        if (activeMenu.includes("NODE")) {
           fillDropdown("Status Lapangan", "filterStatusLap", "Semua Status Lapangan");
           fillDropdown("PROGRES LAPANGAN", "filterProgresLap", "Semua Progres Lapangan");
           fillDropdown("SUB PROGRES LAPANGAN", "filterSubProgresLap", "Semua Sub Progres");
-        } else if (currentActiveMenu === "HEM SBU") {
-          // Khusus HEM: Judul dan target kolom berubah otomatis!
+        } else if (activeMenu.includes("HEM")) {
           fillDropdown("STATUS JT", "filterStatusLap", "Semua Status JT");
           fillDropdown("Progress Lapangan", "filterProgresLap", "Semua Progress Lapangan");
           fillDropdown("Sub Status", "filterSubProgresLap", "Semua Sub Status");
-        } else if (currentActiveMenu === "OLO SBU") {
+        } else if (activeMenu.includes("OLO")) {
           fillDropdown("Sub Status", "filterStatusLap", "Semua Sub Status");
           fillDropdown("Progress Lapangan", "filterProgresLap", "Semua Progress Lapangan");
           fillDropdown("Mitra", "filterSubProgresLap", "Semua Mitra"); 
-        } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
+        } else if (activeMenu.includes("JPP")) {
           fillDropdown("Status", "filterStatusLap", "Semua Status");
           fillDropdown("SUB STATUS KONS", "filterProgresLap", "Semua Sub Status Kons");
           fillDropdown("Mitra", "filterSubProgresLap", "Semua Mitra");
         }
 
-        // 2. KODE PENCARIAN DINAMIS
+        // Update pilihan kotak pencarian (Search Box)
         const searchColumn = document.getElementById("searchColumn");
         if (searchColumn) {
           searchColumn.innerHTML = ""; 
           let searchOptions = [];
-          if (currentActiveMenu === "NODE-B") {
+          if (activeMenu.includes("NODE")) {
             searchOptions = ["SITE ID", "SITE NAME"];
-          } else if (currentActiveMenu === "HEM SBU" || currentActiveMenu === "OLO SBU") {
+          } else if (activeMenu.includes("HEM") || activeMenu.includes("OLO")) {
             searchOptions = ["NO ORDER", "IHLD", "NAMA PROYEK"];
-          } else if (currentActiveMenu === "JPP PT3/PT4" || currentActiveMenu.includes("JPP")) {
+          } else if (activeMenu.includes("JPP")) {
             searchOptions = ["ID-IHLD", "NAMA LOP"];
           }
           searchOptions.forEach(opt => {
@@ -938,6 +949,85 @@
             searchColumn.appendChild(optionEl);
           });
         }
+      }
+
+      // ==========================================
+      // 2. FUNGSI PENYARINGAN DATA (FILTER ANTI MACET)
+      // ==========================================
+      function applyFilters() {
+        if (!globalData || globalData.length === 0) return; // Cegah error jika data belum siap
+        
+        let filteredData = [...globalData];
+
+        // Ambil nilai yang dipilih oleh user
+        const val1 = document.getElementById("filterStatusLap") ? document.getElementById("filterStatusLap").value.trim() : "";
+        const val2 = document.getElementById("filterProgresLap") ? document.getElementById("filterProgresLap").value.trim() : "";
+        const val3 = document.getElementById("filterSubProgresLap") ? document.getElementById("filterSubProgresLap").value.trim() : "";
+
+        // Pengecek data super stabil
+        function getSafeValue(item, colTarget) {
+            if (!colTarget) return "";
+            const targetUpper = colTarget.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+            
+            for (let key in item) {
+                if (key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase() === targetUpper) {
+                    let val = item[key];
+                    return val !== null && val !== undefined ? val.toString().trim() : "";
+                }
+            }
+            return "";
+        }
+
+        // Cocokkan target kolom berdasarkan menu aktif
+        const activeMenu = (currentActiveMenu || "").toUpperCase().trim();
+        let col1 = "", col2 = "", col3 = "";
+        
+        if (activeMenu.includes("NODE")) {
+            col1 = "Status Lapangan"; col2 = "PROGRES LAPANGAN"; col3 = "SUB PROGRES LAPANGAN";
+        } else if (activeMenu.includes("HEM")) {
+            col1 = "STATUS JT"; col2 = "Progress Lapangan"; col3 = "Sub Status";
+        } else if (activeMenu.includes("OLO")) {
+            col1 = "Sub Status"; col2 = "Progress Lapangan"; col3 = "Mitra";
+        } else if (activeMenu.includes("JPP")) {
+            col1 = "Status"; col2 = "SUB STATUS KONS"; col3 = "Mitra";
+        }
+
+        // Terapkan saringan jika kotak tidak kosong
+        if (val1 !== "") filteredData = filteredData.filter(item => getSafeValue(item, col1) === val1);
+        if (val2 !== "") filteredData = filteredData.filter(item => getSafeValue(item, col2) === val2);
+        if (val3 !== "") filteredData = filteredData.filter(item => getSafeValue(item, col3) === val3);
+
+        // Bagian Kotak Pencarian Teks
+        const searchInput = document.getElementById("searchSiteId");
+        const searchColumn = document.getElementById("searchColumn");
+
+        if (searchInput && searchColumn && searchInput.value.trim() !== "") {
+          const query = searchInput.value.trim().toUpperCase();
+          const selectedCol = searchColumn.value.trim().toUpperCase();
+
+          filteredData = filteredData.filter((item) => {
+            for (let key in item) {
+              let cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+              let isTargetColumn = false;
+
+              if (selectedCol === "SITE ID") isTargetColumn = (cleanKey === "SITE ID" || cleanKey === "SITEID");
+              else if (selectedCol === "NO ORDER") isTargetColumn = (cleanKey === "NO ORDER" || cleanKey === "NO. ORDER" || cleanKey === "NOMOR ORDER" || cleanKey.includes("NO ORDER"));
+              else if (selectedCol === "IHLD" || selectedCol === "ID-IHLD") isTargetColumn = (cleanKey === "IHLD" || cleanKey === "ID-IHLD" || cleanKey.includes("IHLD"));
+              else isTargetColumn = (cleanKey === selectedCol);
+
+              if (isTargetColumn) {
+                let cellValue = item[key];
+                if (cellValue !== null && cellValue !== undefined && cellValue.toString().toUpperCase().includes(query)) {
+                  return true; // Cocok!
+                }
+              }
+            }
+            return false; // Tidak cocok
+          });
+        }
+
+        // Eksekusi hasil akhirnya
+        updateDashboard(filteredData);
       }
 
       // ==========================================
