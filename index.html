@@ -709,7 +709,7 @@
           </div>
 
           <div class="date-filter-container" style="display: flex; gap: 10px; align-items: center; margin-left: 15px;">
-            <span style="color: #8b949e; font-size: 13px; font-weight: bold;">GOLIVE:</span>
+            <span style="color: #8b949e; font-size: 13px; font-weight: bold;">KOMITMEN GOLIVE:</span>
             <input type="date" id="startDate" class="date-input" title="Mulai Tanggal">
             <span style="color: #8b949e;">-</span>
             <input type="date" id="endDate" class="date-input" title="Sampai Tanggal">
@@ -1491,13 +1491,16 @@
             "Mitra",
             "Progress Lapangan",
             "Sub Status",
-            "SERVICE", // Langsung ketik nama aslinya
+            "SERVICE",
             "BANDWIDTH",
+            "DURASI JT",
             "BOQ",
             "REVENEU",
+            "KONTRAK",
+            "STATUS PT1",
+            "NEW ODP",
             "PRIORITY BY TIF",
             "DURASI ORDER",
-            "DURASI JT",
             "Komitmen Golive",
             "Detail Progres",
           ];
@@ -1512,8 +1515,12 @@
             "Sub Status",
             "SERVICE",
             "BANDWIDTH",
+            "DURASI JT",
             "BOQ",
             "REVENEU",
+            "KONTRAK",
+            "STATUS PT1",
+            "NEW ODP",
             "PRIORITY BY TIF",
             "Mitra",
             "Komitmen Golive",
@@ -1596,7 +1603,16 @@
         desiredHeaders.forEach((header) => {
           const th = document.createElement("th");
           th.style.cursor = "pointer"; // Ubah kursor jadi ikon tangan saat diarahkan ke judul tabel
-
+          const newColumns = [
+            "SERVICE", "BANDWIDTH", "DURASI JT", "BOQ", 
+            "REVENEU", "KONTRAK", "STATUS PT1", "NEW ODP", "PRIORITY BY TIF"
+          ];
+          
+          // Jika nama header saat ini ada di dalam daftar kolom baru, ubah warnanya
+          if (newColumns.includes(header)) {
+              th.style.backgroundColor = "#7f1d1d"; // Warna merah gelap/marun (cocok untuk dark mode)
+              th.style.color = "#ffffff";           // Teks warna putih agar terbaca jelas
+          }
           // Tambahkan Ikon Panah Sortir
           let iconHtml =
             '<i class="fa-solid fa-sort" style="opacity: 0.3; margin-left: 8px;"></i>';
