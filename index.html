@@ -199,7 +199,21 @@
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
-
+      .date-input {
+        background-color: #161b22;
+        color: #c9d1d9;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 13px;
+        outline: none;
+        cursor: pointer;
+      }
+      /* Mengubah ikon kalender bawaan browser agar berwarna putih */
+      .date-input::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        cursor: pointer;
+      }
       .menu-item {
         padding: 12px 20px;
         display: flex;
@@ -448,6 +462,52 @@
         background-color: var(--card-bg);
         color: var(--text-main);
       }
+     /* GAYA WADAH UTAMA */
+.custom-multiselect { 
+  position: relative; 
+  display: inline-block; 
+  min-width: 170px; /* Lebar standar, sesuaikan jika kurang */
+}
+
+/* MENIRU DESAIN DROPDOWN LAMA */
+.multiselect-btn { 
+  background-color: transparent; /* Menyatu dengan background */
+  color: #fff; 
+  border: 1px solid #30363d; /* Garis tepi tipis seperti aslinya */
+  border-radius: 6px; 
+  padding: 8px 12px; 
+  cursor: pointer; 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  font-size: 13px; 
+  font-weight: 500;
+  height: 38px; /* Pastikan tingginya sama dengan kotak pencarian di sebelahnya */
+}
+
+.multiselect-btn:hover { border-color: #8b949e; }
+.multiselect-btn .btn-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px; /* Mencegah teks kepanjangan keluar kotak */
+}
+.multiselect-btn .dropdown-arrow { font-size: 10px; margin-left: 8px; color: #8b949e; }
+
+/* KOTAK CHECKBOX YANG MUNCUL SAAT DIKLIK */
+.multiselect-content { 
+  display: none; position: absolute; background-color: #161b22; 
+  border: 1px solid #30363d; min-width: 100%; z-index: 1000; 
+  max-height: 250px; overflow-y: auto; border-radius: 6px; 
+  margin-top: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); 
+}
+.multiselect-content.show { display: block; }
+.multiselect-content label { 
+  display: flex; align-items: center; padding: 8px 12px; color: #c9d1d9; 
+  cursor: pointer; font-size: 13px; margin: 0; white-space: nowrap;
+}
+.multiselect-content label:hover { background-color: #1f242c; }
+.multiselect-content input[type="checkbox"] { margin-right: 8px; cursor: pointer; }
     </style>
   </head>
   <body>
@@ -623,29 +683,37 @@
             oninput="applyFilters()"
             placeholder="Ketik pencarian di sini..."
           />
-          <select
-            id="filterStatusLap"
-            class="btn-action"
-            style="outline: none; flex: 1; min-width: 150px"
-          >
-            <option value="ALL">Semua Status Lapangan</option>
-          </select>
 
-          <select
-            id="filterProgresLap"
-            class="btn-action"
-            style="outline: none; flex: 1; min-width: 150px"
-          >
-            <option value="ALL">Semua Progres Lapangan</option>
-          </select>
+          <div class="custom-multiselect" style="flex: 1; min-width: 150px">
+            <div class="multiselect-btn" onclick="toggleMultiSelect('optionsStatusLap')">
+              <span id="labelStatusLap" class="btn-text">Semua Status</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+            <div class="multiselect-content" id="optionsStatusLap"></div>
+          </div>
 
-          <select
-            id="filterSubProgresLap"
-            class="btn-action"
-            style="outline: none; flex: 1; min-width: 150px"
-          >
-            <option value="ALL">Semua Sub Progres Lapangan</option>
-          </select>
+          <div class="custom-multiselect" style="flex: 1; min-width: 150px">
+            <div class="multiselect-btn" onclick="toggleMultiSelect('optionsProgresLap')">
+              <span id="labelProgresLap" class="btn-text">Semua Progress</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+            <div class="multiselect-content" id="optionsProgresLap"></div>
+          </div>
+
+          <div class="custom-multiselect" style="flex: 1; min-width: 150px">
+            <div class="multiselect-btn" onclick="toggleMultiSelect('optionsSubProgres')">
+              <span id="labelSubProgres" class="btn-text">Semua Sub Status</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+            <div class="multiselect-content" id="optionsSubProgres"></div>
+          </div>
+
+          <div class="date-filter-container" style="display: flex; gap: 10px; align-items: center; margin-left: 15px;">
+            <span style="color: #8b949e; font-size: 13px; font-weight: bold;">GOLIVE:</span>
+            <input type="date" id="startDate" class="date-input" title="Mulai Tanggal">
+            <span style="color: #8b949e;">-</span>
+            <input type="date" id="endDate" class="date-input" title="Sampai Tanggal">
+          </div>
         </div>
         <div class="table-container">
           <table id="dataTable" style="display: none">
@@ -768,7 +836,10 @@
             });
             if (gid === gidJpp || gid === "0") {
               globalData = globalData.filter((item) => {
-                let regionFmc = (item["REGION FMC"] || item["Region Fmc"] || "").toString().trim().toUpperCase();
+                let regionFmc = (item["REGION FMC"] || item["Region Fmc"] || "")
+                  .toString()
+                  .trim()
+                  .toUpperCase();
                 return regionFmc === "SUMBAGUT";
               });
             }
@@ -792,42 +863,76 @@
         let filteredData = [...globalData];
 
         // Ambil nilai filter yang dipilih user
-        const val1 = document.getElementById("filterStatusLap") ? document.getElementById("filterStatusLap").value.trim() : "";
-        const val2 = document.getElementById("filterProgresLap") ? document.getElementById("filterProgresLap").value.trim() : "";
-        const val3 = document.getElementById("filterSubProgresLap") ? document.getElementById("filterSubProgresLap").value.trim() : "";
+        const val1 = document.getElementById("filterStatusLap")
+          ? document.getElementById("filterStatusLap").value.trim()
+          : "";
+        const val2 = document.getElementById("filterProgresLap")
+          ? document.getElementById("filterProgresLap").value.trim()
+          : "";
+        const val3 = document.getElementById("filterSubProgresLap")
+          ? document.getElementById("filterSubProgresLap").value.trim()
+          : "";
 
         // PERBAIKAN: Fungsi penarik nilai yang BENAR-BENAR kebal huruf besar/kecil
         function getSafeValue(item, colTarget) {
-            if (!colTarget) return "";
-            const targetUpper = colTarget.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
-            
-            // Cari nama kolom asli di dalam data yang cocok
-            const realKey = Object.keys(item).find(k => 
-                k.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase() === targetUpper
-            );
-            
-            let val = realKey ? item[realKey] : item[colTarget];
-            return val !== null && val !== undefined ? val.toString().trim() : "";
+          if (!colTarget) return "";
+          const targetUpper = colTarget
+            .replace(/[\n\r]+/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .toUpperCase();
+
+          // Cari nama kolom asli di dalam data yang cocok
+          const realKey = Object.keys(item).find(
+            (k) =>
+              k
+                .replace(/[\n\r]+/g, " ")
+                .replace(/\s+/g, " ")
+                .trim()
+                .toUpperCase() === targetUpper,
+          );
+
+          let val = realKey ? item[realKey] : item[colTarget];
+          return val !== null && val !== undefined ? val.toString().trim() : "";
         }
 
         // Tentukan kolom filter berdasarkan normalisasi menu aktif
         const activeMenu = (currentActiveMenu || "").toUpperCase().trim();
-        let col1 = "", col2 = "", col3 = "";
-        
+        let col1 = "",
+          col2 = "",
+          col3 = "";
+
         if (activeMenu.includes("NODE")) {
-            col1 = "Status Lapangan"; col2 = "PROGRES LAPANGAN"; col3 = "SUB PROGRES LAPANGAN";
+          col1 = "Status Lapangan";
+          col2 = "PROGRES LAPANGAN";
+          col3 = "SUB PROGRES LAPANGAN";
         } else if (activeMenu.includes("HEM")) {
-            col1 = "STATUS JT"; col2 = "Progress Lapangan"; col3 = "Sub Status";
+          col1 = "STATUS JT";
+          col2 = "Progress Lapangan";
+          col3 = "Sub Status";
         } else if (activeMenu.includes("OLO")) {
-            col1 = "Sub Status"; col2 = "Progress Lapangan"; col3 = "Mitra";
+          col1 = "Sub Status";
+          col2 = "Progress Lapangan";
+          col3 = "Mitra";
         } else if (activeMenu.includes("JPP")) {
-            col1 = "Status"; col2 = "SUB STATUS KONS"; col3 = "Mitra";
+          col1 = "Status";
+          col2 = "SUB STATUS KONS";
+          col3 = "Mitra";
         }
 
         // Eksekusi filter dropdown
-        if (val1) filteredData = filteredData.filter(item => getSafeValue(item, col1) === val1);
-        if (val2) filteredData = filteredData.filter(item => getSafeValue(item, col2) === val2);
-        if (val3) filteredData = filteredData.filter(item => getSafeValue(item, col3) === val3);
+        if (val1)
+          filteredData = filteredData.filter(
+            (item) => getSafeValue(item, col1) === val1,
+          );
+        if (val2)
+          filteredData = filteredData.filter(
+            (item) => getSafeValue(item, col2) === val2,
+          );
+        if (val3)
+          filteredData = filteredData.filter(
+            (item) => getSafeValue(item, col3) === val3,
+          );
 
         // Filter Teks Pencarian (Search Box)
         const searchInput = document.getElementById("searchSiteId");
@@ -840,17 +945,29 @@
           filteredData = filteredData.filter((item) => {
             let isMatch = false;
             for (let key in item) {
-              let cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+              let cleanKey = key
+                .replace(/[\n\r]+/g, " ")
+                .replace(/\s+/g, " ")
+                .trim()
+                .toUpperCase();
               let isTargetColumn = false;
 
               if (selectedCol === "SITE ID") {
-                isTargetColumn = (cleanKey === "SITE ID" || cleanKey === "SITEID");
+                isTargetColumn =
+                  cleanKey === "SITE ID" || cleanKey === "SITEID";
               } else if (selectedCol === "NO ORDER") {
-                isTargetColumn = (cleanKey === "NO ORDER" || cleanKey === "NO. ORDER" || cleanKey === "NOMOR ORDER" || cleanKey.includes("NO ORDER"));
+                isTargetColumn =
+                  cleanKey === "NO ORDER" ||
+                  cleanKey === "NO. ORDER" ||
+                  cleanKey === "NOMOR ORDER" ||
+                  cleanKey.includes("NO ORDER");
               } else if (selectedCol === "IHLD" || selectedCol === "ID-IHLD") {
-                isTargetColumn = (cleanKey === "IHLD" || cleanKey === "ID-IHLD" || cleanKey.includes("IHLD"));
+                isTargetColumn =
+                  cleanKey === "IHLD" ||
+                  cleanKey === "ID-IHLD" ||
+                  cleanKey.includes("IHLD");
               } else {
-                isTargetColumn = (cleanKey === selectedCol);
+                isTargetColumn = cleanKey === selectedCol;
               }
 
               if (isTargetColumn) {
@@ -866,74 +983,162 @@
             return isMatch;
           });
         }
+        const startInput = document.getElementById("startDate");
+        const endInput = document.getElementById("endDate");
 
+        if (startInput && endInput && (startInput.value || endInput.value)) {
+            // Ambil batas waktu (diubah ke format angka/Timestamp agar bisa dibandingkan)
+            const startLimit = startInput.value ? new Date(startInput.value).setHours(0,0,0,0) : -Infinity;
+            const endLimit = endInput.value ? new Date(endInput.value).setHours(23,59,59,999) : Infinity;
+
+            // Alat Penerjemah format tanggal Excel (misal: 10/Feb/26 menjadi format baku)
+            function parseCustomDate(dateStr) {
+                if (!dateStr || dateStr === "-") return null;
+                let d = dateStr.toString().trim();
+                const parts = d.replace(/-/g, '/').split('/'); // Ubah strip jadi garis miring
+                if (parts.length === 3) {
+                    let day = parseInt(parts[0], 10);
+                    let monthStr = parts[1].toUpperCase();
+                    let year = parseInt(parts[2], 10);
+                    if (year < 100) year += 2000; // Ubah 26 jadi 2026
+
+                    // Kamus Bulan (Bisa baca ejaan Indonesia maupun Inggris)
+                    const months = { "JAN":0, "FEB":1, "MAR":2, "APR":3, "MAY":4, "MEI":4, "JUN":5, "JUL":6, "AUG":7, "AGU":7, "SEP":8, "OCT":9, "OKT":9, "NOV":10, "DEC":11, "DES":11 };
+                    let month = months[monthStr];
+                    if (month !== undefined && !isNaN(day) && !isNaN(year)) return new Date(year, month, day).getTime();
+                }
+                // Jika formatnya sudah standar baku
+                let fallback = new Date(d).getTime();
+                return isNaN(fallback) ? null : fallback;
+            }
+
+            // Saring data berdasarkan tanggal
+            filteredData = filteredData.filter(item => {
+                let dateValue = "";
+                // Cari target kolom (kebal huruf besar/kecil & spasi)
+                for (let key in item) {
+                    let cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+                    if (cleanKey === "KOMITMEN GO-LIVE" || cleanKey === "KOMITMEN GOLIVE" || cleanKey === "TGL TGT OA") {
+                        dateValue = item[key];
+                        break;
+                    }
+                }
+                
+                if (!dateValue) return false; // Jika baris ini tidak punya tanggal, sembunyikan
+
+                let itemTime = parseCustomDate(dateValue);
+                if (!itemTime) return false; // Jika format tanggal rusak/acak, sembunyikan
+
+                // Luluskan jika tanggal baris ini berada di antara batas awal dan akhir
+                return itemTime >= startLimit && itemTime <= endLimit;
+            });
+        }
         // Tampilkan hasil akhir filter ke dashboard
         updateDashboard(filteredData);
       }
 
-    // ==========================================
+      // ==========================================
       // 1. FUNGSI MENGISI DROPDOWN (100% AMAN & ANTI-ERROR)
       // ==========================================
       function populateTableDropdowns(data) {
-        function fillDropdown(columnKey, elementId, defaultText) {
-          const select = document.getElementById(elementId);
-          if (!select) return; // Jika elemen HTML tidak ada, lewati
-          
-          select.innerHTML = `<option value="">${defaultText}</option>`;
-          if (!data || data.length === 0) return; // Jika data kosong, lewati
+        if (!data || data.length === 0) return; // Jika data kosong, lewati
 
-          const targetUpper = columnKey.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
-          
+        // =======================================================
+        // FUNGSI PINTAR: Bisa mengisi Checkbox ATAU Dropdown biasa
+        // =======================================================
+        function fillDropdownSmart(columnKey, selectId, multiContainerId, defaultText) {
+          const targetUpper = columnKey
+            .replace(/[\n\r]+/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .toUpperCase();
+
           // Cari nama kunci (key) asli di dalam data
-          let realKey = columnKey; 
+          let realKey = columnKey;
           for (let key in data[0]) {
-             if (key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase() === targetUpper) {
-                 realKey = key;
-                 break;
-             }
+            if (
+              key
+                .replace(/[\n\r]+/g, " ")
+                .replace(/\s+/g, " ")
+                .trim()
+                .toUpperCase() === targetUpper
+            ) {
+              realKey = key;
+              break;
+            }
           }
 
           // Kumpulkan data unik
-          const uniqueValues = [...new Set(data.map((item) => {
-              let val = item[realKey];
-              return val !== null && val !== undefined ? val.toString().trim() : "";
-          }))].filter(val => val !== "");
+          const uniqueValues = [
+            ...new Set(
+              data.map((item) => {
+                let val = item[realKey];
+                return val !== null && val !== undefined
+                  ? val.toString().trim()
+                  : "";
+              })
+            ),
+          ].filter((val) => val !== "");
 
-          // Masukkan ke dalam pilihan
-          uniqueValues.sort().forEach((val) => {
-            const option = document.createElement("option");
-            option.value = val;
-            option.textContent = val;
-            select.appendChild(option);
-          });
+          uniqueValues.sort();
+
+          // 1. Cek apakah menggunakan Multi-Select Checkbox (HTML Baru)
+          const multiContainer = document.getElementById(multiContainerId);
+          if (multiContainer) {
+            multiContainer.innerHTML = ""; // Kosongkan isi sebelumnya
+            uniqueValues.forEach((val) => {
+              let label = document.createElement("label");
+              // Ketika dicentang, langsung panggil applyFilters()
+              label.innerHTML = `<input type="checkbox" value="${val}" onchange="applyFilters()"> ${val}`;
+              multiContainer.appendChild(label);
+            });
+            return; // Selesai, jangan lanjut ke bawah
+          }
+
+          // 2. Fallback: Gunakan Dropdown <select> biasa (HTML Lama)
+          const select = document.getElementById(selectId);
+          if (select) {
+            select.innerHTML = `<option value="">${defaultText}</option>`;
+            uniqueValues.forEach((val) => {
+              const option = document.createElement("option");
+              option.value = val;
+              option.textContent = val;
+              select.appendChild(option);
+            });
+          }
         }
 
         // Tentukan menu aktif saat ini dengan aman
         const activeMenu = (currentActiveMenu || "").toUpperCase().trim();
 
-        // Isi dropdown sesuai menu
+        // =======================================================
+        // ISI FILTER SESUAI MENU AKTIF
+        // Parameter: (Nama Kolom, ID Select Lama, ID Container Multi-Select Baru, Teks Default)
+        // =======================================================
         if (activeMenu.includes("NODE")) {
-          fillDropdown("Status Lapangan", "filterStatusLap", "Semua Status Lapangan");
-          fillDropdown("PROGRES LAPANGAN", "filterProgresLap", "Semua Progres Lapangan");
-          fillDropdown("SUB PROGRES LAPANGAN", "filterSubProgresLap", "Semua Sub Progres");
+          fillDropdownSmart("Status Lapangan", "filterStatusLap", "optionsStatusLap", "Semua Status Lapangan");
+          fillDropdownSmart("PROGRES LAPANGAN", "filterProgresLap", "optionsProgresLap", "Semua Progres Lapangan");
+          fillDropdownSmart("SUB PROGRES LAPANGAN", "filterSubProgresLap", "optionsSubProgres", "Semua Sub Progres");
         } else if (activeMenu.includes("HEM")) {
-          fillDropdown("STATUS JT", "filterStatusLap", "Semua Status JT");
-          fillDropdown("Progress Lapangan", "filterProgresLap", "Semua Progress Lapangan");
-          fillDropdown("Sub Status", "filterSubProgresLap", "Semua Sub Status");
+          fillDropdownSmart("STATUS JT", "filterStatusLap", "optionsStatusLap", "Semua Status JT");
+          fillDropdownSmart("Progress Lapangan", "filterProgresLap", "optionsProgresLap", "Semua Progress Lapangan");
+          fillDropdownSmart("Sub Status", "filterSubProgresLap", "optionsSubProgres", "Semua Sub Status");
         } else if (activeMenu.includes("OLO")) {
-          fillDropdown("Sub Status", "filterStatusLap", "Semua Sub Status");
-          fillDropdown("Progress Lapangan", "filterProgresLap", "Semua Progress Lapangan");
-          fillDropdown("Mitra", "filterSubProgresLap", "Semua Mitra"); 
+          fillDropdownSmart("Sub Status", "filterStatusLap", "optionsStatusLap", "Semua Sub Status");
+          fillDropdownSmart("Progress Lapangan", "filterProgresLap", "optionsProgresLap", "Semua Progress Lapangan");
+          fillDropdownSmart("Mitra", "filterSubProgresLap", "optionsSubProgres", "Semua Mitra");
         } else if (activeMenu.includes("JPP")) {
-          fillDropdown("Status", "filterStatusLap", "Semua Status");
-          fillDropdown("SUB STATUS KONS", "filterProgresLap", "Semua Sub Status Kons");
-          fillDropdown("Mitra", "filterSubProgresLap", "Semua Mitra");
+          fillDropdownSmart("Status", "filterStatusLap", "optionsStatusLap", "Semua Status");
+          fillDropdownSmart("SUB STATUS KONS", "filterProgresLap", "optionsProgresLap", "Semua Sub Status Kons");
+          fillDropdownSmart("Mitra", "filterSubProgresLap", "optionsSubProgres", "Semua Mitra");
         }
 
-        // Update pilihan kotak pencarian (Search Box)
+        // =======================================================
+        // UPDATE PILIHAN KOTAK PENCARIAN (SEARCH BOX)
+        // =======================================================
         const searchColumn = document.getElementById("searchColumn");
         if (searchColumn) {
-          searchColumn.innerHTML = ""; 
+          searchColumn.innerHTML = "";
           let searchOptions = [];
           if (activeMenu.includes("NODE")) {
             searchOptions = ["SITE ID", "SITE NAME"];
@@ -942,7 +1147,7 @@
           } else if (activeMenu.includes("JPP")) {
             searchOptions = ["ID-IHLD", "NAMA LOP"];
           }
-          searchOptions.forEach(opt => {
+          searchOptions.forEach((opt) => {
             const optionEl = document.createElement("option");
             optionEl.value = opt;
             optionEl.textContent = opt;
@@ -954,50 +1159,90 @@
       // ==========================================
       // 2. FUNGSI PENYARINGAN DATA (FILTER ANTI MACET)
       // ==========================================
+     // ==========================================
+      // FUNGSI PENYARINGAN DATA (FILTER SMART & ANTI MACET)
+      // ==========================================
       function applyFilters() {
         if (!globalData || globalData.length === 0) return; // Cegah error jika data belum siap
-        
+
         let filteredData = [...globalData];
 
-        // Ambil nilai yang dipilih oleh user
-        const val1 = document.getElementById("filterStatusLap") ? document.getElementById("filterStatusLap").value.trim() : "";
-        const val2 = document.getElementById("filterProgresLap") ? document.getElementById("filterProgresLap").value.trim() : "";
-        const val3 = document.getElementById("filterSubProgresLap") ? document.getElementById("filterSubProgresLap").value.trim() : "";
+        // ---------------------------------------------------------
+        // 1. FUNGSI PENGAMBIL NILAI PINTAR (CHECKBOX ATAU DROPDOWN)
+        // ---------------------------------------------------------
+        function getFilterValues(selectId, optionsId, labelId, defaultText) {
+          const multiContainer = document.getElementById(optionsId);
+          let selectedValues = [];
 
-        // Pengecek data super stabil
-        function getSafeValue(item, colTarget) {
-            if (!colTarget) return "";
-            const targetUpper = colTarget.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+          if (multiContainer) {
+            // Jika pakai HTML Checkbox Baru
+            const checked = multiContainer.querySelectorAll('input:checked');
+            selectedValues = Array.from(checked).map(cb => cb.value.trim());
             
-            for (let key in item) {
-                if (key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase() === targetUpper) {
-                    let val = item[key];
-                    return val !== null && val !== undefined ? val.toString().trim() : "";
-                }
+            // Update teks tombol (misal: "2 Terpilih")
+            const labelEl = document.getElementById(labelId);
+            if (labelEl) {
+              labelEl.textContent = selectedValues.length > 0 ? `${selectedValues.length} Terpilih` : defaultText;
             }
-            return "";
+          } else {
+            // Jika pakai HTML Select Dropdown Lama
+            const selectEl = document.getElementById(selectId);
+            if (selectEl && selectEl.value.trim() !== "") {
+              selectedValues = [selectEl.value.trim()];
+            }
+          }
+          return selectedValues;
         }
 
-        // Cocokkan target kolom berdasarkan menu aktif
+        // Ambil nilai filter dalam bentuk Array
+        const vals1 = getFilterValues("filterStatusLap", "optionsStatusLap", "labelStatusLap", "Semua Status");
+        const vals2 = getFilterValues("filterProgresLap", "optionsProgresLap", "labelProgresLap", "Semua Progress");
+        const vals3 = getFilterValues("filterSubProgresLap", "optionsSubProgres", "labelSubProgres", "Semua Sub Status");
+
+        // ---------------------------------------------------------
+        // 2. PENGECEK DATA SUPER STABIL
+        // ---------------------------------------------------------
+        function getSafeValue(item, colTarget) {
+          if (!colTarget) return "";
+          const targetUpper = colTarget.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+
+          for (let key in item) {
+            if (key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase() === targetUpper) {
+              let val = item[key];
+              return val !== null && val !== undefined ? val.toString().trim() : "";
+            }
+          }
+          return "";
+        }
+
+        // Tentukan kolom target sesuai menu aktif
         const activeMenu = (currentActiveMenu || "").toUpperCase().trim();
         let col1 = "", col2 = "", col3 = "";
-        
+
         if (activeMenu.includes("NODE")) {
-            col1 = "Status Lapangan"; col2 = "PROGRES LAPANGAN"; col3 = "SUB PROGRES LAPANGAN";
+          col1 = "Status Lapangan"; col2 = "PROGRES LAPANGAN"; col3 = "SUB PROGRES LAPANGAN";
         } else if (activeMenu.includes("HEM")) {
-            col1 = "STATUS JT"; col2 = "Progress Lapangan"; col3 = "Sub Status";
+          col1 = "STATUS JT"; col2 = "Progress Lapangan"; col3 = "Sub Status";
         } else if (activeMenu.includes("OLO")) {
-            col1 = "Sub Status"; col2 = "Progress Lapangan"; col3 = "Mitra";
+          col1 = "Sub Status"; col2 = "Progress Lapangan"; col3 = "Mitra";
         } else if (activeMenu.includes("JPP")) {
-            col1 = "Status"; col2 = "SUB STATUS KONS"; col3 = "Mitra";
+          col1 = "Status"; col2 = "SUB STATUS KONS"; col3 = "Mitra";
         }
 
-        // Terapkan saringan jika kotak tidak kosong
-        if (val1 !== "") filteredData = filteredData.filter(item => getSafeValue(item, col1) === val1);
-        if (val2 !== "") filteredData = filteredData.filter(item => getSafeValue(item, col2) === val2);
-        if (val3 !== "") filteredData = filteredData.filter(item => getSafeValue(item, col3) === val3);
+        // Terapkan saringan DROPDOWN / CHECKBOX
+        if (vals1.length > 0) {
+          filteredData = filteredData.filter(item => vals1.includes(getSafeValue(item, col1)));
+        }
+        if (vals2.length > 0) {
+          filteredData = filteredData.filter(item => vals2.includes(getSafeValue(item, col2)));
+        }
+        if (vals3.length > 0) {
+          filteredData = filteredData.filter(item => vals3.includes(getSafeValue(item, col3)));
+        }
 
-        // Bagian Kotak Pencarian Teks
+        // ---------------------------------------------------------
+        // 3. FILTER PENCARIAN TEKS (SEARCH BOX)
+        // ---------------------------------------------------------
         const searchInput = document.getElementById("searchSiteId");
         const searchColumn = document.getElementById("searchColumn");
 
@@ -1010,23 +1255,71 @@
               let cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
               let isTargetColumn = false;
 
-              if (selectedCol === "SITE ID") isTargetColumn = (cleanKey === "SITE ID" || cleanKey === "SITEID");
-              else if (selectedCol === "NO ORDER") isTargetColumn = (cleanKey === "NO ORDER" || cleanKey === "NO. ORDER" || cleanKey === "NOMOR ORDER" || cleanKey.includes("NO ORDER"));
-              else if (selectedCol === "IHLD" || selectedCol === "ID-IHLD") isTargetColumn = (cleanKey === "IHLD" || cleanKey === "ID-IHLD" || cleanKey.includes("IHLD"));
-              else isTargetColumn = (cleanKey === selectedCol);
+              if (selectedCol === "SITE ID") isTargetColumn = cleanKey === "SITE ID" || cleanKey === "SITEID";
+              else if (selectedCol === "NO ORDER") isTargetColumn = cleanKey === "NO ORDER" || cleanKey === "NO. ORDER" || cleanKey === "NOMOR ORDER" || cleanKey.includes("NO ORDER");
+              else if (selectedCol === "IHLD" || selectedCol === "ID-IHLD") isTargetColumn = cleanKey === "IHLD" || cleanKey === "ID-IHLD" || cleanKey.includes("IHLD");
+              else isTargetColumn = cleanKey === selectedCol;
 
               if (isTargetColumn) {
                 let cellValue = item[key];
                 if (cellValue !== null && cellValue !== undefined && cellValue.toString().toUpperCase().includes(query)) {
-                  return true; // Cocok!
+                  return true;
                 }
               }
             }
-            return false; // Tidak cocok
+            return false;
           });
         }
 
-        // Eksekusi hasil akhirnya
+        // ---------------------------------------------------------
+        // 4. FILTER RENTANG TANGGAL (KOMITMEN GOLIVE)
+        // ---------------------------------------------------------
+        const startInput = document.getElementById("startDate");
+        const endInput = document.getElementById("endDate");
+
+        if (startInput && endInput && (startInput.value || endInput.value)) {
+          const startLimit = startInput.value ? new Date(startInput.value).setHours(0,0,0,0) : -Infinity;
+          const endLimit = endInput.value ? new Date(endInput.value).setHours(23,59,59,999) : Infinity;
+
+          function parseCustomDate(dateStr) {
+            if (!dateStr || dateStr === "-") return null;
+            let d = dateStr.toString().trim();
+            const parts = d.replace(/-/g, '/').split('/'); 
+            if (parts.length === 3) {
+              let day = parseInt(parts[0], 10);
+              let monthStr = parts[1].toUpperCase();
+              let year = parseInt(parts[2], 10);
+              if (year < 100) year += 2000; 
+
+              const months = { "JAN":0, "FEB":1, "MAR":2, "APR":3, "MAY":4, "MEI":4, "JUN":5, "JUL":6, "AUG":7, "AGU":7, "SEP":8, "OCT":9, "OKT":9, "NOV":10, "DEC":11, "DES":11 };
+              let month = months[monthStr];
+              if (month !== undefined && !isNaN(day) && !isNaN(year)) return new Date(year, month, day).getTime();
+            }
+            let fallback = new Date(d).getTime();
+            return isNaN(fallback) ? null : fallback;
+          }
+
+          filteredData = filteredData.filter(item => {
+            let dateValue = "";
+            for (let key in item) {
+              let cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+              if (cleanKey === "KOMITMEN GO-LIVE" || cleanKey === "KOMITMEN GOLIVE" || cleanKey === "TGL TGT OA") {
+                dateValue = item[key];
+                break;
+              }
+            }
+            if (!dateValue) return false;
+
+            let itemTime = parseCustomDate(dateValue);
+            if (!itemTime) return false;
+
+            return itemTime >= startLimit && itemTime <= endLimit;
+          });
+        }
+
+        // =========================================================
+        // EKSEKUSI HASIL AKHIR KE DASHBOARD
+        // =========================================================
         updateDashboard(filteredData);
       }
 
@@ -1198,15 +1491,15 @@
             "Mitra",
             "Progress Lapangan",
             "Sub Status",
-            "SERVICE",         // Langsung ketik nama aslinya
+            "SERVICE", // Langsung ketik nama aslinya
             "BANDWIDTH",
-            "BOQ",            
-            "REVENEU",      
+            "BOQ",
+            "REVENEU",
             "PRIORITY BY TIF",
             "DURASI ORDER",
             "DURASI JT",
             "Komitmen Golive",
-            "Detail Progres"
+            "Detail Progres",
           ];
         } else if (currentActiveMenu === "OLO SBU") {
           desiredHeaders = [
@@ -1312,7 +1605,7 @@
               ? '<i class="fa-solid fa-sort-up" style="margin-left: 8px; color: #3B82F6;"></i>'
               : '<i class="fa-solid fa-sort-down" style="margin-left: 8px; color: #3B82F6;"></i>';
           }
-          
+
           th.innerHTML = `${header} ${iconHtml}`;
 
           // Event Listener Saat Judul Diklik
@@ -1721,7 +2014,7 @@
       document.addEventListener("DOMContentLoaded", () => {
         const sidebarToggle = document.getElementById("sidebarToggle"); // Tombol Hamburger
         const closeSidebarBtn = document.getElementById("closeSidebar"); // Tombol X baru
-        const sidebar = document.querySelector(".sidebar"); 
+        const sidebar = document.querySelector(".sidebar");
 
         // Fungsi membuka/menutup dari tombol hamburger
         if (sidebarToggle && sidebar) {
@@ -1738,8 +2031,10 @@
         }
 
         // Tutup otomatis kalau salah satu menu diklik (agar praktis)
-        const menuItems = document.querySelectorAll(".sidebar .nav-link, .sidebar li"); 
-        menuItems.forEach(item => {
+        const menuItems = document.querySelectorAll(
+          ".sidebar .nav-link, .sidebar li",
+        );
+        menuItems.forEach((item) => {
           item.addEventListener("click", () => {
             if (window.innerWidth <= 768) {
               sidebar.classList.remove("active");
@@ -1747,6 +2042,17 @@
           });
         });
       });
+      // Fungsi untuk membuka/menutup kotak checkbox
+function toggleMultiSelect(id) {
+  document.getElementById(id).classList.toggle("show");
+}
+
+// Menutup dropdown jika kita mengeklik area kosong di luar kotak
+window.addEventListener('click', function(e) {
+  if (!e.target.closest('.custom-multiselect')) {
+    document.querySelectorAll('.multiselect-content').forEach(el => el.classList.remove('show'));
+  }
+});
       // ==========================================
       // MENGAKTIFKAN SAKLAR OTOMATIS UNTUK SEMUA FILTER
       // ==========================================
@@ -1755,7 +2061,7 @@
         const f1 = document.getElementById("filterStatusLap");
         const f2 = document.getElementById("filterProgresLap");
         const f3 = document.getElementById("filterSubProgresLap");
-        
+
         // Ketika pilihan dropdown berubah (change), langsung jalankan applyFilters
         if (f1) f1.addEventListener("change", applyFilters);
         if (f2) f2.addEventListener("change", applyFilters);
@@ -1764,10 +2070,15 @@
         // Pastikan saklar kotak pencarian teks juga aman
         const searchInput = document.getElementById("searchSiteId");
         const searchCol = document.getElementById("searchColumn");
-        
+
         // Ketika teks diketik (input) atau kolom pencarian diubah, jalankan applyFilters
         if (searchInput) searchInput.addEventListener("input", applyFilters);
         if (searchCol) searchCol.addEventListener("change", applyFilters);
+        const startDateInput = document.getElementById("startDate");
+        const endDateInput = document.getElementById("endDate");
+        
+        if (startDateInput) startDateInput.addEventListener("change", applyFilters);
+        if (endDateInput) endDateInput.addEventListener("change", applyFilters);
       });
     </script>
   </body>
