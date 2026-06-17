@@ -1543,55 +1543,51 @@
           ];
         }
 
-        // =========================================================
+       // =========================================================
         // FUNGSI HELPER: Pengambil Nilai Sel Anti-Error & Anti-Spasi
         // =========================================================
         function getCellValue(row, header) {
           let val = "-";
           const searchHeader = header.replace(/\s+/g, " ").trim().toUpperCase();
-          const matchingKey = Object.keys(row).find((key) => {
-            const cleanKey = key
-              .replace(/[\n\r]+/g, " ")
-              .replace(/\s+/g, " ")
-              .trim()
-              .toUpperCase();
-            if (
-              searchHeader === "KOMITMEN GO-LIVE" ||
-              searchHeader === "KOMITMEN GOLIVE"
-            )
-              return (
-                cleanKey === "KOMITMEN GO-LIVE" ||
-                cleanKey === "KOMITMEN GOLIVE" ||
-                cleanKey === "TGL TGT OA"
-              );
-            else if (searchHeader === "NO ORDER")
-              return (
-                cleanKey === "NO ORDER" ||
-                cleanKey === "NO. ORDER" ||
-                cleanKey === "NOMOR ORDER" ||
-                cleanKey.includes("NO ORDER")
-              );
-            else if (searchHeader === "SITE ID")
-              return cleanKey === "SITE ID" || cleanKey === "SITEID";
-            else if (
-              searchHeader === "DETAIL PROGRES" ||
-              searchHeader === "DETAIL STATUS"
-            )
-              return (
-                cleanKey === "DETAIL PROGRES" ||
-                cleanKey === "DETAIL PROGRESS" ||
-                cleanKey === "DETAIL STATUS"
-              );
-            return cleanKey === searchHeader;
+          
+          const matchingKey = Object.keys(row).find(key => {
+             const cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+             
+             if (searchHeader === "KOMITMEN GO-LIVE" || searchHeader === "KOMITMEN GOLIVE") {
+                 return cleanKey === "KOMITMEN GO-LIVE" || cleanKey === "KOMITMEN GOLIVE" || cleanKey === "TGL TGT OA";
+             }
+             else if (searchHeader === "NO ORDER") {
+                 return cleanKey === "NO ORDER" || cleanKey === "NO. ORDER" || cleanKey === "NOMOR ORDER" || cleanKey.includes("NO ORDER");
+             }
+             else if (searchHeader === "SITE ID") {
+                 return cleanKey === "SITE ID" || cleanKey === "SITEID";
+             }
+             else if (searchHeader === "DETAIL PROGRES" || searchHeader === "DETAIL STATUS") {
+                 return cleanKey === "DETAIL PROGRES" || cleanKey === "DETAIL PROGRESS" || cleanKey === "DETAIL STATUS";
+             }
+             // ---> KODE BARU: Radar pintar khusus NAMA PROYEK <---
+             else if (searchHeader === "NAMA PROYEK") {
+                 return cleanKey === "NAMA PROYEK" || 
+                        cleanKey === "NAMA PELANGGAN" || 
+                        cleanKey === "NAMA LOP" || 
+                        cleanKey === "CUSTOMER NAME" ||
+                        cleanKey.includes("PROYEK") || 
+                        cleanKey.includes("PELANGGAN");
+             }
+             // ---------------------------------------------------
+             else if (searchHeader.includes("TITIP SBU")) {
+                 const parts = searchHeader.split("|");
+                 if (parts.length > 1) {
+                     const keyword = parts[1].trim(); 
+                     return cleanKey.includes("TITIP SBU") && cleanKey.includes(keyword);
+                 }
+             }
+
+             return cleanKey === searchHeader;
           });
 
-          if (
-            matchingKey &&
-            row[matchingKey] !== undefined &&
-            row[matchingKey] !== null &&
-            row[matchingKey].toString().trim() !== ""
-          ) {
-            val = row[matchingKey];
+          if (matchingKey && row[matchingKey] !== undefined && row[matchingKey] !== null && row[matchingKey].toString().trim() !== "") {
+              val = row[matchingKey];
           }
           return val;
         }
