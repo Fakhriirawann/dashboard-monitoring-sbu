@@ -707,7 +707,13 @@
             </div>
             <div class="multiselect-content" id="optionsSubProgres"></div>
           </div>
-
+          <div class="custom-multiselect" style="flex: 1; min-width: 150px">
+            <div class="multiselect-btn" onclick="toggleMultiSelect('optionsDistrict')">
+              <span id="labelDistrict" class="btn-text">Semua District</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+            <div class="multiselect-content" id="optionsDistrict"></div>
+          </div>
           <div class="date-filter-container" style="display: flex; gap: 10px; align-items: center; margin-left: 15px;">
             <span style="color: #8b949e; font-size: 13px; font-weight: bold;">KOMITMEN GOLIVE:</span>
             <input type="date" id="startDate" class="date-input" title="Mulai Tanggal">
@@ -1115,22 +1121,29 @@
         // ISI FILTER SESUAI MENU AKTIF
         // Parameter: (Nama Kolom, ID Select Lama, ID Container Multi-Select Baru, Teks Default)
         // =======================================================
+       // =======================================================
+        // ISI FILTER SESUAI MENU AKTIF
+        // =======================================================
         if (activeMenu.includes("NODE")) {
           fillDropdownSmart("Status Lapangan", "filterStatusLap", "optionsStatusLap", "Semua Status Lapangan");
           fillDropdownSmart("PROGRES LAPANGAN", "filterProgresLap", "optionsProgresLap", "Semua Progres Lapangan");
           fillDropdownSmart("SUB PROGRES LAPANGAN", "filterSubProgresLap", "optionsSubProgres", "Semua Sub Progres");
+          fillDropdownSmart("DISTRICT", "filterDistrict", "optionsDistrict", "Semua District"); // <--- KODE BARU
         } else if (activeMenu.includes("HEM")) {
           fillDropdownSmart("STATUS JT", "filterStatusLap", "optionsStatusLap", "Semua Status JT");
           fillDropdownSmart("Progress Lapangan", "filterProgresLap", "optionsProgresLap", "Semua Progress Lapangan");
           fillDropdownSmart("Sub Status", "filterSubProgresLap", "optionsSubProgres", "Semua Sub Status");
+          fillDropdownSmart("DISTRICT", "filterDistrict", "optionsDistrict", "Semua District"); // <--- KODE BARU
         } else if (activeMenu.includes("OLO")) {
           fillDropdownSmart("Sub Status", "filterStatusLap", "optionsStatusLap", "Semua Sub Status");
           fillDropdownSmart("Progress Lapangan", "filterProgresLap", "optionsProgresLap", "Semua Progress Lapangan");
           fillDropdownSmart("Mitra", "filterSubProgresLap", "optionsSubProgres", "Semua Mitra");
+          fillDropdownSmart("DISTRICT", "filterDistrict", "optionsDistrict", "Semua District"); // <--- KODE BARU
         } else if (activeMenu.includes("JPP")) {
           fillDropdownSmart("Status", "filterStatusLap", "optionsStatusLap", "Semua Status");
           fillDropdownSmart("SUB STATUS KONS", "filterProgresLap", "optionsProgresLap", "Semua Sub Status Kons");
           fillDropdownSmart("Mitra", "filterSubProgresLap", "optionsSubProgres", "Semua Mitra");
+          fillDropdownSmart("DISTRICT", "filterDistrict", "optionsDistrict", "Semua District"); // <--- KODE BARU
         }
 
         // =======================================================
@@ -1198,6 +1211,7 @@
         const vals1 = getFilterValues("filterStatusLap", "optionsStatusLap", "labelStatusLap", "Semua Status");
         const vals2 = getFilterValues("filterProgresLap", "optionsProgresLap", "labelProgresLap", "Semua Progress");
         const vals3 = getFilterValues("filterSubProgresLap", "optionsSubProgres", "labelSubProgres", "Semua Sub Status");
+        const vals4 = getFilterValues("filterDistrict", "optionsDistrict", "labelDistrict", "Semua District");
 
         // ---------------------------------------------------------
         // 2. PENGECEK DATA SUPER STABIL
@@ -1238,6 +1252,9 @@
         }
         if (vals3.length > 0) {
           filteredData = filteredData.filter(item => vals3.includes(getSafeValue(item, col3)));
+        }
+        if (vals4.length > 0) {
+          filteredData = filteredData.filter(item => vals4.includes(getSafeValue(item, "DISTRICT")));
         }
 
         // ---------------------------------------------------------
