@@ -1080,7 +1080,7 @@
               data.map((item) => {
                 let val = item[realKey];
                 return val !== null && val !== undefined
-                  ? val.toString().trim()
+                  ? val.toString().trim().toUpperCase()
                   : "";
               })
             ),
@@ -1254,7 +1254,7 @@
           filteredData = filteredData.filter(item => vals3.includes(getSafeValue(item, col3)));
         }
         if (vals4.length > 0) {
-          filteredData = filteredData.filter(item => vals4.includes(getSafeValue(item, "DISTRICT")));
+          filteredData = filteredData.filter(item => vals4.includes(getSafeValue(item, "DISTRICT").toUpperCase()));
         }
 
         // ---------------------------------------------------------
