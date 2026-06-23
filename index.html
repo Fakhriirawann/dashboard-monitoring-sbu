@@ -1019,25 +1019,29 @@
             }
 
             // Saring data berdasarkan tanggal
-            filteredData = filteredData.filter(item => {
-                let dateValue = "";
-                // Cari target kolom (kebal huruf besar/kecil & spasi)
-                for (let key in item) {
-                    let cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
-                    if (cleanKey === "KOMITMEN GO-LIVE" || cleanKey === "KOMITMEN GOLIVE" || cleanKey === "TGL TGT OA") {
-                        dateValue = item[key];
-                        break;
-                    }
-                }
-                
-                if (!dateValue) return false; // Jika baris ini tidak punya tanggal, sembunyikan
+           filteredData = filteredData.filter(item => {
+            const cleanKeys = {};
+            for (let k in item) {
+              cleanKeys[k.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase()] = k;
+            }
+            
+            let targetKey;
+            // Jika sedang di menu OLO SBU, prioritaskan NEW KOMITMEN GL
+            if (typeof currentActiveMenu !== 'undefined' && currentActiveMenu === "OLO SBU") {
+                targetKey = cleanKeys["NEW KOMITMEN GL"] || cleanKeys["KOMITMEN GOLIVE"] || cleanKeys["KOMITMEN GO-LIVE"] || cleanKeys["TGL TGT OA"];
+            } else {
+                // Menu selain OLO langsung pakai kolom lama
+                targetKey = cleanKeys["KOMITMEN GOLIVE"] || cleanKeys["KOMITMEN GO-LIVE"] || cleanKeys["TGL TGT OA"];
+            }
+            
+            let dateValue = targetKey ? item[targetKey] : "";
+            if (!dateValue) return false;
 
-                let itemTime = parseCustomDate(dateValue);
-                if (!itemTime) return false; // Jika format tanggal rusak/acak, sembunyikan
+            let itemTime = parseCustomDate(dateValue);
+            if (!itemTime) return false;
 
-                // Luluskan jika tanggal baris ini berada di antara batas awal dan akhir
-                return itemTime >= startLimit && itemTime <= endLimit;
-            });
+            return itemTime >= startLimit && itemTime <= endLimit;
+          });
         }
         // Tampilkan hasil akhir filter ke dashboard
         updateDashboard(filteredData);
@@ -1316,7 +1320,7 @@
             return isNaN(fallback) ? null : fallback;
           }
 
-          filteredData = filteredData.filter(item => {
+          (item => {
             let dateValue = "";
             for (let key in item) {
               let cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
@@ -1412,7 +1416,7 @@
 
           // Logika Dinamis: Beda Menu, Beda Kolom Status yang dibaca
           if (currentActiveMenu === "NODE-B") {
-            statusLap = (item["Status Lapangan"] || "").toUpperCase();
+            statusfilteredData = filteredData.filterLap = (item["Status Lapangan"] || "").toUpperCase();
             progLap = (item["PROGRES LAPANGAN"] || "").toUpperCase();
           } else if (currentActiveMenu === "HEM SBU") {
             statusLap = (
@@ -1564,16 +1568,35 @@
         // FUNGSI HELPER: Pengambil Nilai Sel Anti-Error & Anti-Spasi
         // =========================================================
         function getCellValue(row, header) {
-          let val = "-";
           const searchHeader = header.replace(/\s+/g, " ").trim().toUpperCase();
-          
+
+          // 1. PRIORITAS KHUSUS KOMITMEN GOLIVE (Hanya untuk OLO SBU)
+          if (searchHeader === "KOMITMEN GO-LIVE" || searchHeader === "KOMITMEN GOLIVE") {
+              const cleanKeys = {};
+              for (let k in row) {
+                  cleanKeys[k.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase()] = k;
+              }
+              
+              let targetKey;
+              // Jika sedang di menu OLO SBU, prioritaskan NEW KOMITMEN GL
+              if (typeof currentActiveMenu !== 'undefined' && currentActiveMenu === "OLO SBU") {
+                  targetKey = cleanKeys["NEW KOMITMEN GL"] || cleanKeys["KOMITMEN GOLIVE"] || cleanKeys["KOMITMEN GO-LIVE"] || cleanKeys["TGL TGT OA"];
+              } else {
+                  // Menu selain OLO langsung pakai kolom lama
+                  targetKey = cleanKeys["KOMITMEN GOLIVE"] || cleanKeys["KOMITMEN GO-LIVE"] || cleanKeys["TGL TGT OA"];
+              }
+              
+              if (targetKey && row[targetKey] !== undefined && row[targetKey] !== null && row[targetKey].toString().trim() !== "") {
+                  return row[targetKey];
+              }
+              return "-";
+          }
+
+          // 2. PENGECEKAN KOLOM LAINNYA
           const matchingKey = Object.keys(row).find(key => {
              const cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
              
-             if (searchHeader === "KOMITMEN GO-LIVE" || searchHeader === "KOMITMEN GOLIVE") {
-                 return cleanKey === "KOMITMEN GO-LIVE" || cleanKey === "KOMITMEN GOLIVE" || cleanKey === "TGL TGT OA";
-             }
-             else if (searchHeader === "NO ORDER") {
+             if (searchHeader === "NO ORDER") {
                  return cleanKey === "NO ORDER" || cleanKey === "NO. ORDER" || cleanKey === "NOMOR ORDER" || cleanKey.includes("NO ORDER");
              }
              else if (searchHeader === "SITE ID") {
@@ -1582,16 +1605,9 @@
              else if (searchHeader === "DETAIL PROGRES" || searchHeader === "DETAIL STATUS") {
                  return cleanKey === "DETAIL PROGRES" || cleanKey === "DETAIL PROGRESS" || cleanKey === "DETAIL STATUS";
              }
-             // ---> KODE BARU: Radar pintar khusus NAMA PROYEK <---
              else if (searchHeader === "NAMA PROYEK") {
-                 return cleanKey === "NAMA PROYEK" || 
-                        cleanKey === "NAMA PELANGGAN" || 
-                        cleanKey === "NAMA LOP" || 
-                        cleanKey === "CUSTOMER NAME" ||
-                        cleanKey.includes("PROYEK") || 
-                        cleanKey.includes("PELANGGAN");
+                 return cleanKey === "NAMA PROYEK" || cleanKey === "NAMA PELANGGAN" || cleanKey === "NAMA LOP" || cleanKey === "CUSTOMER NAME" || cleanKey.includes("PROYEK") || cleanKey.includes("PELANGGAN");
              }
-             // ---------------------------------------------------
              else if (searchHeader.includes("TITIP SBU")) {
                  const parts = searchHeader.split("|");
                  if (parts.length > 1) {
@@ -1599,14 +1615,13 @@
                      return cleanKey.includes("TITIP SBU") && cleanKey.includes(keyword);
                  }
              }
-
              return cleanKey === searchHeader;
           });
 
           if (matchingKey && row[matchingKey] !== undefined && row[matchingKey] !== null && row[matchingKey].toString().trim() !== "") {
-              val = row[matchingKey];
+              return row[matchingKey];
           }
-          return val;
+          return "-";
         }
 
         // =========================================================
