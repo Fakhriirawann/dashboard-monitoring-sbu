@@ -862,190 +862,6 @@
           },
         });
       }
-      // ==========================================
-      // FUNGSI MENERAPKAN FILTER SAAT DROPDOWN DIKLIK
-      // ==========================================
-      function applyFilters() {
-        let filteredData = [...globalData];
-
-        // Ambil nilai filter yang dipilih user
-        const val1 = document.getElementById("filterStatusLap")
-          ? document.getElementById("filterStatusLap").value.trim()
-          : "";
-        const val2 = document.getElementById("filterProgresLap")
-          ? document.getElementById("filterProgresLap").value.trim()
-          : "";
-        const val3 = document.getElementById("filterSubProgresLap")
-          ? document.getElementById("filterSubProgresLap").value.trim()
-          : "";
-
-        // PERBAIKAN: Fungsi penarik nilai yang BENAR-BENAR kebal huruf besar/kecil
-        function getSafeValue(item, colTarget) {
-          if (!colTarget) return "";
-          const targetUpper = colTarget
-            .replace(/[\n\r]+/g, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-            .toUpperCase();
-
-          // Cari nama kolom asli di dalam data yang cocok
-          const realKey = Object.keys(item).find(
-            (k) =>
-              k
-                .replace(/[\n\r]+/g, " ")
-                .replace(/\s+/g, " ")
-                .trim()
-                .toUpperCase() === targetUpper,
-          );
-
-          let val = realKey ? item[realKey] : item[colTarget];
-          return val !== null && val !== undefined ? val.toString().trim() : "";
-        }
-
-        // Tentukan kolom filter berdasarkan normalisasi menu aktif
-        const activeMenu = (currentActiveMenu || "").toUpperCase().trim();
-        let col1 = "",
-          col2 = "",
-          col3 = "";
-
-        if (activeMenu.includes("NODE")) {
-          col1 = "Status Lapangan";
-          col2 = "PROGRES LAPANGAN";
-          col3 = "SUB PROGRES LAPANGAN";
-        } else if (activeMenu.includes("HEM")) {
-          col1 = "STATUS JT";
-          col2 = "Progress Lapangan";
-          col3 = "Sub Status";
-        } else if (activeMenu.includes("OLO")) {
-          col1 = "Sub Status";
-          col2 = "Progress Lapangan";
-          col3 = "Mitra";
-        } else if (activeMenu.includes("JPP")) {
-          col1 = "Status";
-          col2 = "SUB STATUS KONS";
-          col3 = "Mitra";
-        }
-
-        // Eksekusi filter dropdown
-        if (val1)
-          filteredData = filteredData.filter(
-            (item) => getSafeValue(item, col1) === val1,
-          );
-        if (val2)
-          filteredData = filteredData.filter(
-            (item) => getSafeValue(item, col2) === val2,
-          );
-        if (val3)
-          filteredData = filteredData.filter(
-            (item) => getSafeValue(item, col3) === val3,
-          );
-
-        // Filter Teks Pencarian (Search Box)
-        const searchInput = document.getElementById("searchSiteId");
-        const searchColumn = document.getElementById("searchColumn");
-
-        if (searchInput && searchColumn && searchInput.value.trim() !== "") {
-          const query = searchInput.value.trim().toUpperCase();
-          const selectedCol = searchColumn.value.trim().toUpperCase();
-
-          filteredData = filteredData.filter((item) => {
-            let isMatch = false;
-            for (let key in item) {
-              let cleanKey = key
-                .replace(/[\n\r]+/g, " ")
-                .replace(/\s+/g, " ")
-                .trim()
-                .toUpperCase();
-              let isTargetColumn = false;
-
-              if (selectedCol === "SITE ID") {
-                isTargetColumn =
-                  cleanKey === "SITE ID" || cleanKey === "SITEID";
-              } else if (selectedCol === "NO ORDER") {
-                isTargetColumn =
-                  cleanKey === "NO ORDER" ||
-                  cleanKey === "NO. ORDER" ||
-                  cleanKey === "NOMOR ORDER" ||
-                  cleanKey.includes("NO ORDER");
-              } else if (selectedCol === "IHLD" || selectedCol === "ID-IHLD") {
-                isTargetColumn =
-                  cleanKey === "IHLD" ||
-                  cleanKey === "ID-IHLD" ||
-                  cleanKey.includes("IHLD");
-              } else {
-                isTargetColumn = cleanKey === selectedCol;
-              }
-
-              if (isTargetColumn) {
-                let cellValue = item[key];
-                if (cellValue !== null && cellValue !== undefined) {
-                  if (cellValue.toString().toUpperCase().includes(query)) {
-                    isMatch = true;
-                  }
-                }
-                break;
-              }
-            }
-            return isMatch;
-          });
-        }
-        const startInput = document.getElementById("startDate");
-        const endInput = document.getElementById("endDate");
-
-        if (startInput && endInput && (startInput.value || endInput.value)) {
-            // Ambil batas waktu (diubah ke format angka/Timestamp agar bisa dibandingkan)
-            const startLimit = startInput.value ? new Date(startInput.value).setHours(0,0,0,0) : -Infinity;
-            const endLimit = endInput.value ? new Date(endInput.value).setHours(23,59,59,999) : Infinity;
-
-            // Alat Penerjemah format tanggal Excel (misal: 10/Feb/26 menjadi format baku)
-            function parseCustomDate(dateStr) {
-                if (!dateStr || dateStr === "-") return null;
-                let d = dateStr.toString().trim();
-                const parts = d.replace(/-/g, '/').split('/'); // Ubah strip jadi garis miring
-                if (parts.length === 3) {
-                    let day = parseInt(parts[0], 10);
-                    let monthStr = parts[1].toUpperCase();
-                    let year = parseInt(parts[2], 10);
-                    if (year < 100) year += 2000; // Ubah 26 jadi 2026
-
-                    // Kamus Bulan (Bisa baca ejaan Indonesia maupun Inggris)
-                    const months = { "JAN":0, "FEB":1, "MAR":2, "APR":3, "MAY":4, "MEI":4, "JUN":5, "JUL":6, "AUG":7, "AGU":7, "SEP":8, "OCT":9, "OKT":9, "NOV":10, "DEC":11, "DES":11 };
-                    let month = months[monthStr];
-                    if (month !== undefined && !isNaN(day) && !isNaN(year)) return new Date(year, month, day).getTime();
-                }
-                // Jika formatnya sudah standar baku
-                let fallback = new Date(d).getTime();
-                return isNaN(fallback) ? null : fallback;
-            }
-
-            // Saring data berdasarkan tanggal
-           filteredData = filteredData.filter(item => {
-            const cleanKeys = {};
-            for (let k in item) {
-              cleanKeys[k.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase()] = k;
-            }
-            
-            let targetKey;
-            // Jika sedang di menu OLO SBU, prioritaskan NEW KOMITMEN GL
-            if (typeof currentActiveMenu !== 'undefined' && currentActiveMenu === "OLO SBU") {
-                targetKey = cleanKeys["NEW KOMITMEN GL"] || cleanKeys["KOMITMEN GOLIVE"] || cleanKeys["KOMITMEN GO-LIVE"] || cleanKeys["TGL TGT OA"];
-            } else {
-                // Menu selain OLO langsung pakai kolom lama
-                targetKey = cleanKeys["KOMITMEN GOLIVE"] || cleanKeys["KOMITMEN GO-LIVE"] || cleanKeys["TGL TGT OA"];
-            }
-            
-            let dateValue = targetKey ? item[targetKey] : "";
-            if (!dateValue) return false;
-
-            let itemTime = parseCustomDate(dateValue);
-            if (!itemTime) return false;
-
-            return itemTime >= startLimit && itemTime <= endLimit;
-          });
-        }
-        // Tampilkan hasil akhir filter ke dashboard
-        updateDashboard(filteredData);
-      }
 
       // ==========================================
       // 1. FUNGSI MENGISI DROPDOWN (100% AMAN & ANTI-ERROR)
@@ -1174,10 +990,7 @@
       }
 
       // ==========================================
-      // 2. FUNGSI PENYARINGAN DATA (FILTER ANTI MACET)
-      // ==========================================
-     // ==========================================
-      // FUNGSI PENYARINGAN DATA (FILTER SMART & ANTI MACET)
+      // FUNGSI PENYARINGAN DATA MASTER (GABUNGAN ALL-IN-ONE)
       // ==========================================
       function applyFilters() {
         if (!globalData || globalData.length === 0) return; // Cegah error jika data belum siap
@@ -1185,24 +998,20 @@
         let filteredData = [...globalData];
 
         // ---------------------------------------------------------
-        // 1. FUNGSI PENGAMBIL NILAI PINTAR (CHECKBOX ATAU DROPDOWN)
+        // 1. FUNGSI PENGAMBIL NILAI PINTAR (CHECKBOX)
         // ---------------------------------------------------------
         function getFilterValues(selectId, optionsId, labelId, defaultText) {
           const multiContainer = document.getElementById(optionsId);
           let selectedValues = [];
 
           if (multiContainer) {
-            // Jika pakai HTML Checkbox Baru
             const checked = multiContainer.querySelectorAll('input:checked');
             selectedValues = Array.from(checked).map(cb => cb.value.trim());
-            
-            // Update teks tombol (misal: "2 Terpilih")
             const labelEl = document.getElementById(labelId);
             if (labelEl) {
               labelEl.textContent = selectedValues.length > 0 ? `${selectedValues.length} Terpilih` : defaultText;
             }
           } else {
-            // Jika pakai HTML Select Dropdown Lama
             const selectEl = document.getElementById(selectId);
             if (selectEl && selectEl.value.trim() !== "") {
               selectedValues = [selectEl.value.trim()];
@@ -1211,14 +1020,13 @@
           return selectedValues;
         }
 
-        // Ambil nilai filter dalam bentuk Array
         const vals1 = getFilterValues("filterStatusLap", "optionsStatusLap", "labelStatusLap", "Semua Status");
         const vals2 = getFilterValues("filterProgresLap", "optionsProgresLap", "labelProgresLap", "Semua Progress");
         const vals3 = getFilterValues("filterSubProgresLap", "optionsSubProgres", "labelSubProgres", "Semua Sub Status");
         const vals4 = getFilterValues("filterDistrict", "optionsDistrict", "labelDistrict", "Semua District");
 
         // ---------------------------------------------------------
-        // 2. PENGECEK DATA SUPER STABIL
+        // 2. PENGECEK DATA KOTAK CHECKBOX
         // ---------------------------------------------------------
         function getSafeValue(item, colTarget) {
           if (!colTarget) return "";
@@ -1233,7 +1041,6 @@
           return "";
         }
 
-        // Tentukan kolom target sesuai menu aktif
         const activeMenu = (currentActiveMenu || "").toUpperCase().trim();
         let col1 = "", col2 = "", col3 = "";
 
@@ -1247,19 +1054,10 @@
           col1 = "Status"; col2 = "SUB STATUS KONS"; col3 = "Mitra";
         }
 
-        // Terapkan saringan DROPDOWN / CHECKBOX
-        if (vals1.length > 0) {
-          filteredData = filteredData.filter(item => vals1.includes(getSafeValue(item, col1)));
-        }
-        if (vals2.length > 0) {
-          filteredData = filteredData.filter(item => vals2.includes(getSafeValue(item, col2)));
-        }
-        if (vals3.length > 0) {
-          filteredData = filteredData.filter(item => vals3.includes(getSafeValue(item, col3)));
-        }
-        if (vals4.length > 0) {
-          filteredData = filteredData.filter(item => vals4.includes(getSafeValue(item, "DISTRICT").toUpperCase()));
-        }
+        if (vals1.length > 0) filteredData = filteredData.filter(item => vals1.includes(getSafeValue(item, col1).toUpperCase()));
+        if (vals2.length > 0) filteredData = filteredData.filter(item => vals2.includes(getSafeValue(item, col2).toUpperCase()));
+        if (vals3.length > 0) filteredData = filteredData.filter(item => vals3.includes(getSafeValue(item, col3).toUpperCase()));
+        if (vals4.length > 0) filteredData = filteredData.filter(item => vals4.includes(getSafeValue(item, "DISTRICT").toUpperCase()));
 
         // ---------------------------------------------------------
         // 3. FILTER PENCARIAN TEKS (SEARCH BOX)
@@ -1293,7 +1091,7 @@
         }
 
         // ---------------------------------------------------------
-        // 4. FILTER RENTANG TANGGAL (KOMITMEN GOLIVE)
+        // 4. FILTER RENTANG TANGGAL (KOMITMEN GOLIVE KHUSUS OLO)
         // ---------------------------------------------------------
         const startInput = document.getElementById("startDate");
         const endInput = document.getElementById("endDate");
@@ -1320,16 +1118,32 @@
             return isNaN(fallback) ? null : fallback;
           }
 
-          (item => {
+          filteredData = filteredData.filter(item => {
             let dateValue = "";
-            for (let key in item) {
-              let cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
-              if (cleanKey === "KOMITMEN GO-LIVE" || cleanKey === "KOMITMEN GOLIVE" || cleanKey === "TGL TGT OA") {
-                dateValue = item[key];
-                break;
+
+            // KONDISI A: JIKA SEDANG DI MENU OLO, CARI KOLOM "NEW KOMITMEN GL" DULU
+            if (activeMenu.includes("OLO")) {
+              for (let key in item) {
+                let cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+                if (cleanKey === "NEW KOMITMEN GL" || cleanKey === "NEW KOMITMEN GOLIVE" || cleanKey.includes("NEW KOMITMEN")) {
+                  dateValue = item[key];
+                  break;
+                }
               }
             }
-            if (!dateValue) return false;
+
+            // KONDISI B: JIKA BUKAN MENU OLO, ATAU DI MENU OLO TAPI KOLOM BARUNYA KOSONG
+            if (!dateValue || dateValue === "-") {
+              for (let key in item) {
+                let cleanKey = key.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+                if (cleanKey === "KOMITMEN GO-LIVE" || cleanKey === "KOMITMEN GOLIVE" || cleanKey === "TGL TGT OA" || cleanKey.includes("KOMITMEN")) {
+                  dateValue = item[key];
+                  break;
+                }
+              }
+            }
+
+            if (!dateValue || dateValue === "-") return false;
 
             let itemTime = parseCustomDate(dateValue);
             if (!itemTime) return false;
